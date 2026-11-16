@@ -17,15 +17,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -37,8 +41,10 @@ import com.uade.robotcierre.model.Telemetry
 import com.uade.robotcierre.ui.components.BannerAviso
 import com.uade.robotcierre.ui.components.BarraBateria
 import com.uade.robotcierre.ui.components.BarraSuperior
-import com.uade.robotcierre.ui.components.ProgresoSegmentado
 import com.uade.robotcierre.ui.components.BotonComando
+import com.uade.robotcierre.ui.components.BotonVariante
+import com.uade.robotcierre.ui.components.TarjetaEstado
+import com.uade.robotcierre.ui.components.puntosDeRonda
 import com.uade.robotcierre.ui.components.ChipEstado
 import com.uade.robotcierre.ui.components.ItemOrden
 import com.uade.robotcierre.ui.components.RobotIcons
@@ -102,6 +108,8 @@ fun SupervisionPanelScreen(
             ControlSection(state, onEvent)
             RecentOrders(state)
         }
+        // Fija sobre la barra de navegación: no hay que desplazarse para llegar.
+        StopBar(state, onEvent)
     }
 }
 
@@ -137,22 +145,16 @@ private fun TelemetrySection(t: Telemetry, state: UiState) {
     val stale = state.isStale
     val updated = state.lastUpdateMillis?.let { formatTime(it) }
 
-    // Estado operativo y progreso.
-    TarjetaDato(
+    // Estado operativo y progreso de la ronda (tarjeta azul destacada).
+    TarjetaEstado(
         label = "Estado",
-        value = t.state.label(),
-        modifier = Modifier.fillMaxWidth(),
-        tone = when (t.state) {
-            RobotState.FAULT, RobotState.STOPPED -> Tone.ERROR
-            RobotState.PAUSED -> Tone.WARNING
-            else -> Tone.NEUTRAL
-        },
-        updatedAt = updated,
-        stale = stale
-    ) {
-        Text(progressText(t), style = RobotText.Body, color = RobotColors.Text)
-        ProgresoSegmentado(done = t.checkpoint, total = t.total)
-    }
+        title = t.state.label(),
+        state = t.state,
+        puntos = puntosDeRonda(t.checkpoint, t.total, onZone = t.zone != null),
+        detalle = progressText(t),
+        stale = stale,
+        updatedAt = updated
+    )
 
     // Batería y movimiento.
     Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -164,7 +166,8 @@ private fun TelemetrySection(t: Telemetry, state: UiState) {
                 com.uade.robotcierre.viewmodel.BatteryLevel.OK -> Tone.NEUTRAL
                 else -> state.batteryLevel.tone()
             },
-            stale = stale
+            stale = stale,
+            icon = RobotIcons.Battery
         ) {
             BarraBateria(t.batteryPercent, showLabel = false)
             Text(estimatedText(t), style = RobotText.Small, color = RobotColors.TextSecondary)
@@ -175,7 +178,8 @@ private fun TelemetrySection(t: Telemetry, state: UiState) {
             modifier = Modifier.weight(1f).fillMaxHeight(),
             stale = stale,
             valueStyle = RobotText.Title,
-            fitValue = true
+            fitValue = true,
+            icon = Icons.AutoMirrored.Filled.ArrowForward
         ) {
             Text(
                 if (t.moving) speedText(t) else "0,0 m/s",
@@ -195,7 +199,8 @@ private fun TelemetrySection(t: Telemetry, state: UiState) {
             tone = if (t.peopleDetected > 0) Tone.ERROR else Tone.NEUTRAL,
             stale = stale,
             valueStyle = RobotText.Title,
-            fitValue = true
+            fitValue = true,
+            icon = Icons.Default.Person
         )
     }
     val verified: @Composable (Modifier) -> Unit = { mod ->
@@ -205,7 +210,8 @@ private fun TelemetrySection(t: Telemetry, state: UiState) {
             mod,
             stale = stale,
             valueStyle = RobotText.Title,
-            fitValue = true
+            fitValue = true,
+            icon = Icons.Default.CheckCircle
         )
     }
     val localization: @Composable (Modifier) -> Unit = { mod ->
@@ -216,7 +222,8 @@ private fun TelemetrySection(t: Telemetry, state: UiState) {
             tone = if (t.localizationQuality == LocalizationQuality.DEGRADED) Tone.WARNING else Tone.NEUTRAL,
             stale = stale,
             valueStyle = RobotText.Title,
-            fitValue = true
+            fitValue = true,
+            icon = Icons.Default.LocationOn
         )
     }
     BoxWithConstraints {
@@ -240,7 +247,7 @@ private fun TelemetrySection(t: Telemetry, state: UiState) {
 }
 
 /** Ancho útil mínimo para dibujar las tres tarjetas propias en una fila sin partir las etiquetas. */
-private val MIN_WIDTH_FOR_THREE_CARDS = 366.dp
+private val MIN_WIDTH_FOR_THREE_CARDS = 440.dp
 
 @Composable
 private fun ControlSection(state: UiState, onEvent: (RobotUiEvent) -> Unit) {
@@ -249,53 +256,75 @@ private fun ControlSection(state: UiState, onEvent: (RobotUiEvent) -> Unit) {
 
     fun send(type: CommandType) = onEvent(RobotUiEvent.RequestCommand(type))
 
-    val paused = state.telemetry?.state == RobotState.PAUSED
-    val pauseType = if (paused) CommandType.RESUME_MISSION else CommandType.PAUSE_MISSION
+    val robotState = state.telemetry?.state
+    // Botón principal según el estado: con ronda (en curso, pausada o volviendo) se pausa/reanuda;
+    // en cualquier otro estado se inicia.
+    val inRound = robotState == RobotState.ON_MISSION || robotState == RobotState.PAUSED ||
+        robotState == RobotState.RETURNING
+    val primaryType = when {
+        robotState == RobotState.PAUSED -> CommandType.RESUME_MISSION
+        inRound -> CommandType.PAUSE_MISSION
+        else -> CommandType.START_MISSION
+    }
     val reviewZone = state.zonesNeedingReview.firstOrNull()
-    val disconnected = state.connectionEffective == ConnectionState.DISCONNECTED
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Control", style = RobotText.Subtitle, color = RobotColors.Text)
+        // Principal: azul lleno.
+        ControlButton(
+            primaryType, availability(primaryType),
+            when (primaryType) {
+                CommandType.PAUSE_MISSION -> RobotIcons.Pause
+                else -> Icons.Default.PlayArrow
+            },
+            Modifier.fillMaxWidth()
+        ) { send(primaryType) }
+        // Secundarios: con borde (azul; rojo para cancelar).
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-            ControlButton(
-                CommandType.START_MISSION, availability(CommandType.START_MISSION),
-                Icons.Default.PlayArrow, Modifier.weight(1f)
-            ) { send(CommandType.START_MISSION) }
-            ControlButton(
-                pauseType, availability(pauseType),
-                if (paused) Icons.Default.PlayArrow else RobotIcons.Pause, Modifier.weight(1f)
-            ) { send(pauseType) }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-            ControlButton(
-                CommandType.CANCEL_MISSION, availability(CommandType.CANCEL_MISSION),
-                Icons.Default.Close, Modifier.weight(1f)
-            ) { send(CommandType.CANCEL_MISSION) }
             ControlButton(
                 CommandType.RETURN_TO_SAFE_POINT, availability(CommandType.RETURN_TO_SAFE_POINT),
-                Icons.Default.Home, Modifier.weight(1f)
+                Icons.Default.Home, Modifier.weight(1f), variant = BotonVariante.OUTLINE
             ) { send(CommandType.RETURN_TO_SAFE_POINT) }
+            ControlButton(
+                CommandType.CANCEL_MISSION, availability(CommandType.CANCEL_MISSION),
+                Icons.Default.Close, Modifier.weight(1f), variant = BotonVariante.OUTLINE, tone = Tone.ERROR
+            ) { send(CommandType.CANCEL_MISSION) }
         }
         ControlButton(
             CommandType.MANUAL_REVIEW, availability(CommandType.MANUAL_REVIEW),
             Icons.Default.Check, Modifier.fillMaxWidth(),
-            hint = reviewZone?.let { "Zona: ${it.label}" }
+            hint = reviewZone?.let { "Zona: ${it.label}" },
+            variant = BotonVariante.OUTLINE
         ) { reviewZone?.let { onEvent(RobotUiEvent.RequestCommand(CommandType.MANUAL_REVIEW, it)) } }
+    }
+}
 
-        // La detención operativa nunca se deshabilita.
-        BotonComando(
-            text = CommandType.OPERATIONAL_STOP.label(),
-            onClick = { send(CommandType.OPERATIONAL_STOP) },
-            modifier = Modifier.fillMaxWidth(),
-            icon = RobotIcons.Stop,
-            tone = Tone.ERROR,
-            hint = if (disconnected) "Puede quedar sin respuesta." else null
-        )
-        Text(
-            "Es un comando de software simulado. No reemplaza una parada de emergencia física.",
-            style = RobotText.Small,
-            color = RobotColors.Error
-        )
+/**
+ * Detención operativa y su aviso, fijos abajo (sobre la barra de navegación). Nunca se deshabilita.
+ */
+@Composable
+private fun StopBar(state: UiState, onEvent: (RobotUiEvent) -> Unit) {
+    val disconnected = state.connectionEffective == ConnectionState.DISCONNECTED
+    Column(Modifier.fillMaxWidth().background(RobotColors.Surface)) {
+        HorizontalDivider(color = RobotColors.Border)
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            BotonComando(
+                text = CommandType.OPERATIONAL_STOP.label(),
+                onClick = { onEvent(RobotUiEvent.RequestCommand(CommandType.OPERATIONAL_STOP)) },
+                modifier = Modifier.fillMaxWidth(),
+                icon = RobotIcons.Stop,
+                tone = Tone.ERROR,
+                hint = if (disconnected) "Puede quedar sin respuesta." else null
+            )
+            Text(
+                "Es un comando de software simulado. No reemplaza una parada de emergencia física.",
+                style = RobotText.Small,
+                color = RobotColors.Error
+            )
+        }
     }
 }
 
@@ -306,6 +335,8 @@ private fun ControlButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier,
     hint: String? = null,
+    variant: BotonVariante = BotonVariante.FILLED,
+    tone: Tone = Tone.NEUTRAL,
     onClick: () -> Unit
 ) {
     BotonComando(
@@ -315,7 +346,9 @@ private fun ControlButton(
         icon = icon,
         enabled = availability.enabled,
         reason = availability.reason,
-        hint = hint
+        hint = hint,
+        tone = tone,
+        variant = variant
     )
 }
 

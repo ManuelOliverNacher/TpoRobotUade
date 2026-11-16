@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.uade.robotcierre.model.CommandType
 import com.uade.robotcierre.model.EventType
 import com.uade.robotcierre.ui.components.AlertAction
+import com.uade.robotcierre.ui.components.Tone
 import com.uade.robotcierre.ui.components.BarraSuperior
 import com.uade.robotcierre.ui.components.BotonComando
 import com.uade.robotcierre.ui.components.ItemAlerta
@@ -29,12 +30,13 @@ import com.uade.robotcierre.viewmodel.UiState
 
 /** Ante batería baja el operador decide entre volver a la base o cancelar la ronda. */
 private fun lowBatteryActions(state: UiState, onEvent: (RobotUiEvent) -> Unit): List<AlertAction> {
-    fun action(type: CommandType) = AlertAction(
+    fun action(type: CommandType, tone: Tone = Tone.NEUTRAL) = AlertAction(
+        tone = tone,
         text = type.label(),
         availability = state.availability[type] ?: CommandAvailability.disabled("Sin datos del robot."),
         onClick = { onEvent(RobotUiEvent.RequestCommand(type)) }
     )
-    return listOf(action(CommandType.RETURN_TO_SAFE_POINT), action(CommandType.CANCEL_MISSION))
+    return listOf(action(CommandType.RETURN_TO_SAFE_POINT), action(CommandType.CANCEL_MISSION, Tone.ERROR))
 }
 
 private const val INCIDENT_GUIDANCE = "Elegí: avisar a seguridad, continuar o volver a la base."

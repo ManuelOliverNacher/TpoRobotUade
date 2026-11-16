@@ -1,6 +1,7 @@
 package com.uade.robotcierre.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,6 +24,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.uade.robotcierre.ui.theme.RobotColors
 import com.uade.robotcierre.ui.theme.RobotText
+
+/** Jerarquía del botón: [FILLED] lleno (acción principal o crítica) y [OUTLINE] secundario con borde del color del [Tone]. */
+enum class BotonVariante { FILLED, OUTLINE }
 
 /**
  * Botón de comando de 52 px de alto. Si [enabled] es false se ve deshabilitado y muestra
@@ -36,27 +41,51 @@ fun BotonComando(
     enabled: Boolean = true,
     reason: String? = null,
     tone: Tone = Tone.NEUTRAL,
-    hint: String? = null
+    hint: String? = null,
+    variant: BotonVariante = BotonVariante.FILLED
 ) {
+    val content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {
+        if (icon != null) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+        }
+        Text(text, style = RobotText.Subtitle, textAlign = TextAlign.Center, maxLines = 2)
+    }
+    val buttonModifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)
+    val shape = RoundedCornerShape(12.dp)
+    val padding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Button(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-            shape = RoundedCornerShape(12.dp),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = tone.solid(),
-                contentColor = Color.White,
-                disabledContainerColor = RobotColors.DisabledBg,
-                disabledContentColor = RobotColors.DisabledText
+        when (variant) {
+            BotonVariante.FILLED -> Button(
+                onClick = onClick,
+                enabled = enabled,
+                modifier = buttonModifier,
+                shape = shape,
+                contentPadding = padding,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = tone.solid(),
+                    contentColor = Color.White,
+                    disabledContainerColor = RobotColors.DisabledBg,
+                    disabledContentColor = RobotColors.DisabledText
+                ),
+                content = content
             )
-        ) {
-            if (icon != null) {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-            }
-            Text(text, style = RobotText.Subtitle, textAlign = TextAlign.Center, maxLines = 2)
+            // Secundario: fondo blanco, borde y texto del color del tono (azul o rojo).
+            BotonVariante.OUTLINE -> OutlinedButton(
+                onClick = onClick,
+                enabled = enabled,
+                modifier = buttonModifier,
+                shape = shape,
+                contentPadding = padding,
+                border = BorderStroke(2.dp, if (enabled) tone.solid() else RobotColors.DisabledText),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = RobotColors.Surface,
+                    contentColor = tone.solid(),
+                    disabledContainerColor = RobotColors.DisabledBg,
+                    disabledContentColor = RobotColors.DisabledText
+                ),
+                content = content
+            )
         }
         // Deshabilitado: el motivo. Habilitado: una pista opcional (por ejemplo, la zona a revisar).
         val caption = if (!enabled) reason else hint

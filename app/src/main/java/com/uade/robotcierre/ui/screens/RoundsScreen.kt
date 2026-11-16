@@ -25,7 +25,8 @@ import com.uade.robotcierre.ui.components.BotonComando
 import com.uade.robotcierre.ui.components.Etiqueta
 import com.uade.robotcierre.ui.components.EtiquetaAntiguo
 import com.uade.robotcierre.ui.components.FilaZona
-import com.uade.robotcierre.ui.components.ProgresoSegmentado
+import com.uade.robotcierre.ui.components.TarjetaEstado
+import com.uade.robotcierre.ui.components.puntosDeRonda
 import com.uade.robotcierre.ui.components.Tone
 import com.uade.robotcierre.ui.components.chip
 import com.uade.robotcierre.ui.components.colors
@@ -102,34 +103,32 @@ fun RoundsScreen(
 @Composable
 private fun CurrentRoundCard(state: UiState) {
     val t = state.telemetry
-    Column(
-        Modifier.fillMaxWidth().robotCard().padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Row {
-            Etiqueta("Ronda actual", Modifier.weight(1f))
-            if (state.isStale) EtiquetaAntiguo()
-        }
-        Column(Modifier.alpha(if (state.isStale) 0.5f else 1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            if (t?.missionId != null) {
-                Text("Ronda ${t.missionId}", style = RobotText.Title, color = RobotColors.Text)
-                val started = state.missions
-                    .firstOrNull { it.code == t.missionId && it.result == MissionResult.IN_PROGRESS }
-                    ?.startedAt
-                Text(
-                    started?.let { "Inicio ${formatTime(it)}" } ?: "Inicio —",
-                    style = RobotText.Body,
-                    color = RobotColors.TextSecondary
-                )
-                Text(progressText(t), style = RobotText.Body, color = RobotColors.Text)
-                ProgresoSegmentado(done = t.checkpoint, total = t.total)
-            } else {
+    if (t?.missionId != null) {
+        val started = state.missions
+            .firstOrNull { it.code == t.missionId && it.result == MissionResult.IN_PROGRESS }
+            ?.startedAt
+        // Misma tarjeta azul oscuro del Panel, con los 6 puntos numerados.
+        TarjetaEstado(
+            label = "Ronda actual",
+            title = "Ronda ${t.missionId}",
+            state = t.state,
+            puntos = puntosDeRonda(t.checkpoint, t.total, onZone = t.zone != null),
+            detalle = progressText(t),
+            stale = state.isStale,
+            lines = listOf(started?.let { "Inicio ${formatTime(it)}" } ?: "Inicio —")
+        )
+    } else {
+        Column(
+            Modifier.fillMaxWidth().robotCard().padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row {
+                Etiqueta("Ronda actual", Modifier.weight(1f))
+                if (state.isStale) EtiquetaAntiguo()
+            }
+            Column(Modifier.alpha(if (state.isStale) 0.5f else 1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Sin ronda en curso", style = RobotText.Subtitle, color = RobotColors.Text)
-                Text(
-                    "Iniciá una ronda desde el Panel.",
-                    style = RobotText.Body,
-                    color = RobotColors.TextSecondary
-                )
+                Text("Iniciá una ronda desde el Panel.", style = RobotText.Body, color = RobotColors.TextSecondary)
             }
         }
     }

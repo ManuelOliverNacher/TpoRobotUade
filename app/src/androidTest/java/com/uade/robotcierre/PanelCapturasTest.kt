@@ -45,7 +45,6 @@ class PanelCapturasTest {
 
     /** Baja el Panel hasta el final: se desplaza a la leyenda de software y a la última orden. */
     private fun scrollToBottom(lastText: String) {
-        rule.onNodeWithText("Detención operativa").performScrollTo()
         rule.onNodeWithText(lastText).performScrollTo()
     }
 

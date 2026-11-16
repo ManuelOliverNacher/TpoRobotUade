@@ -35,7 +35,7 @@ adb install -r entrega/BarridoCierreUADE-debug.apk
 ## Cómo se usa
 
 1. **Selección de robot:** tocá **Supervisar**. La app trae un único robot simulado (`go2-edu-01`).
-2. **Panel:** muestra la telemetría (conexión, batería, estado, progreso, movimiento, personas, zonas verificadas, localización) y los botones de control. Los botones que no corresponden aparecen **deshabilitados con el motivo**.
+2. **Panel:** una tarjeta azul con el estado y los 6 puntos de la ronda, la telemetría (conexión, batería, movimiento, personas, zonas verificadas, localización) y los botones de control: el principal (Iniciar / Pausar / Reanudar) en azul lleno, "Volver a la base" y "Revisión manual" con borde azul y "Cancelar ronda" con borde rojo. Los que no corresponden aparecen **deshabilitados con el motivo**. **Detención operativa** y su aviso quedan fijos abajo, sobre la barra de navegación.
 3. **Rondas:** la ronda actual, las 6 zonas en orden y, al terminar, el **resumen de cierre** con "Registrar revisión manual".
 4. **Alertas:** las abiertas arriba y las cerradas atenuadas. "Reconocer alertas" cierra todas las abiertas.
 5. **Historial:** las rondas guardadas (sobreviven al cierre de la app); tocá una para ver sus eventos.

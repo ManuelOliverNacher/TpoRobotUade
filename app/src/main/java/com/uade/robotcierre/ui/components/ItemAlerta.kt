@@ -36,7 +36,8 @@ import com.uade.robotcierre.viewmodel.CommandAvailability
 data class AlertAction(
     val text: String,
     val availability: CommandAvailability,
-    val onClick: () -> Unit
+    val onClick: () -> Unit,
+    val tone: Tone = Tone.NEUTRAL
 )
 
 /**
@@ -93,7 +94,9 @@ fun ItemAlerta(
                             onClick = action.onClick,
                             modifier = Modifier.weight(1f),
                             enabled = action.availability.enabled,
-                            reason = action.availability.reason
+                            reason = action.availability.reason,
+                            tone = action.tone,
+                            variant = BotonVariante.OUTLINE
                         )
                     }
                 }

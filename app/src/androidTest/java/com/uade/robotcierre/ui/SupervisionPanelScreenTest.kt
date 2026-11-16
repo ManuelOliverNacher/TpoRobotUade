@@ -7,6 +7,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -62,9 +63,10 @@ class SupervisionPanelScreenTest {
         rule.onNodeWithText("Sin ronda en curso").assertIsDisplayed()
         rule.onNodeWithText("Conectado").assertIsDisplayed()
 
+        // En reposo el botón principal es "Iniciar ronda"; Pausar/Reanudar no se ofrece.
         rule.onNodeWithText("Iniciar ronda").performScrollTo().assertIsEnabled()
-        rule.onNodeWithText("Pausar ronda").assertIsNotEnabled()
-        rule.onNodeWithText("No hay una ronda en curso.").assertExists()
+        assertEquals(0, count("Pausar ronda"))
+        assertEquals(0, count("Reanudar ronda"))
         rule.onNodeWithText("Cancelar ronda").assertIsNotEnabled()
         rule.onNodeWithText("Volver a la base").assertIsNotEnabled()
         rule.onNodeWithText("El robot ya está en la base.").assertExists()
@@ -75,8 +77,19 @@ class SupervisionPanelScreenTest {
     @Test
     fun laDetencionSiempreEstaHabilitadaYLaLeyendaSiempreVisible() {
         show(uiStateOf(telemetryOf()))
-        rule.onNodeWithText("Detención operativa").performScrollTo().assertIsEnabled()
-        rule.onNodeWithText(disclaimer).performScrollTo().assertIsDisplayed()
+        // La detención y su aviso están fijos abajo: se ven sin desplazarse.
+        rule.onNodeWithText("Detención operativa").assertIsDisplayed().assertIsEnabled()
+        rule.onNodeWithText(disclaimer).assertIsDisplayed()
+    }
+
+    @Test
+    fun laTarjetaDeEstadoMuestraElEstadoGrandeConSuIconoYLosSeisPuntos() {
+        show(uiStateOf(telemetryOf(RobotState.ON_MISSION, Zone.PERGOLA, moving = true)))
+        rule.onNodeWithText("En ronda").assertIsDisplayed()
+        rule.onNodeWithContentDescription("Estado: En ronda").assertIsDisplayed()
+        rule.onNodeWithContentDescription("Progreso de la ronda: 3 de 6 puntos completos").assertIsDisplayed()
+        // Los 6 puntos van numerados.
+        (1..6).forEach { n -> assertTrue(count(n.toString()) >= 1) }
     }
 
     @Test
@@ -90,8 +103,8 @@ class SupervisionPanelScreenTest {
 
         rule.onNodeWithText("Pausar ronda").performScrollTo().assertIsEnabled()
         rule.onNodeWithText("Cancelar ronda").assertIsEnabled()
-        rule.onNodeWithText("Iniciar ronda").assertIsNotEnabled()
-        rule.onNodeWithText("Ya hay una ronda en curso.").assertExists()
+        // Con ronda en curso el principal es Pausar y ya no se ofrece Iniciar.
+        assertEquals(0, count("Iniciar ronda"))
     }
 
     @Test
@@ -110,10 +123,9 @@ class SupervisionPanelScreenTest {
         assertEquals(6, count("ANTIGUO")) // Estado, Batería, Movimiento y las 3 tarjetas propias
         assertTrue(rule.onAllNodesWithText("Actualizado", substring = true).fetchSemanticsNodes().isNotEmpty())
 
-        rule.onNodeWithText("Iniciar ronda").performScrollTo().assertIsNotEnabled()
-        rule.onNodeWithText("Pausar ronda").assertIsNotEnabled()
+        rule.onNodeWithText("Pausar ronda").performScrollTo().assertIsNotEnabled()
         rule.onNodeWithText("Cancelar ronda").assertIsNotEnabled()
-        assertTrue(count("Sin conexión con el robot.") >= 4)
+        assertTrue(count("Sin conexión con el robot.") >= 3)
         rule.onNodeWithText("Detención operativa").assertIsEnabled()
         rule.onNodeWithText("Puede quedar sin respuesta.").assertExists()
     }
@@ -125,10 +137,10 @@ class SupervisionPanelScreenTest {
         show(uiStateOf(telemetryOf(statuses = statuses)))
 
         rule.onNodeWithText("Iniciar ronda").performScrollTo().performClick()
-        rule.onNodeWithText("Pausar ronda").performClick() // deshabilitado: no envía nada
+        rule.onNodeWithText("Cancelar ronda").performClick() // deshabilitado: no envía nada
         rule.onNodeWithText("Zona: Puerta del baño").assertExists()
-        rule.onNodeWithText("Revisión manual").performClick()
-        rule.onNodeWithText("Detención operativa").performScrollTo().performClick()
+        rule.onNodeWithText("Revisión manual").performScrollTo().performClick()
+        rule.onNodeWithText("Detención operativa").performClick()
 
         assertEquals(
             listOf(
@@ -214,6 +226,6 @@ class SupervisionPanelScreenTest {
         show(uiStateOf(null))
         rule.onNodeWithText("Esperando datos del robot…").assertIsDisplayed()
         rule.onNodeWithText("Sin datos todavía").assertIsDisplayed()
-        rule.onNodeWithText("Detención operativa").performScrollTo().assertIsEnabled()
+        rule.onNodeWithText("Detención operativa").assertIsEnabled()
     }
 }

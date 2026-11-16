@@ -86,7 +86,7 @@ class SimulationFlowTest {
         // Banner rojo fijo y, pasados 5 s, datos antiguos.
         waitForSubstring("Sin conexión con el robot. Última actualización")
         rule.waitForText("Datos antiguos (más de 5 s). No representan el estado actual.", timeoutMillis = 12_000)
-        rule.onNodeWithText("Detención operativa").performScrollTo()
+        rule.onNodeWithText("Detención operativa").assertIsDisplayed()
         rule.onNodeWithText("Puede quedar sin respuesta.").assertExists()
 
         // La detención no llega: la orden queda "Sin respuesta" a los 10 s.

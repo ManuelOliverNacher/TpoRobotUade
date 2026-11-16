@@ -113,7 +113,7 @@ class SimulacionCapturasTest {
         shot("desconexion_1_banner_rojo_datos_antiguos")
 
         // La detención no llega: modal y orden "Sin respuesta".
-        rule.onNodeWithText("Detención operativa").performScrollTo().performClick()
+        rule.onNodeWithText("Detención operativa").performClick()
         rule.waitForText("¿Detención operativa?")
         shot("desconexion_2_modal_detencion")
         rule.onNodeWithText("Confirmar").performClick()

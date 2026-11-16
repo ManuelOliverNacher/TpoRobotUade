@@ -61,7 +61,7 @@ class PanelFlowTest {
         rule.onNodeWithText("Iniciar ronda").performScrollTo().performClick()
         waitForText("En ronda")
 
-        rule.onNodeWithText("Detención operativa").performScrollTo().performClick()
+        rule.onNodeWithText("Detención operativa").performClick()
         rule.onNodeWithText("¿Detención operativa?").assertIsDisplayed()
         rule.onNodeWithText(
             "Es un comando de software simulado y no reemplaza una parada de emergencia física."

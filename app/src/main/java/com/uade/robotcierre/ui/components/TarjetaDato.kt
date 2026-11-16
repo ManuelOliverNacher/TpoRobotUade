@@ -7,7 +7,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -33,6 +39,7 @@ fun TarjetaDato(
     stale: Boolean = false,
     valueStyle: TextStyle = RobotText.BigData,
     fitValue: Boolean = false,
+    icon: ImageVector? = null,
     extra: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     val valueColor = when (tone) {
@@ -49,7 +56,13 @@ fun TarjetaDato(
     }
     Column(modifier.robotCard(borderColor = border).padding(12.dp)) {
         // La etiqueta ANTIGUO va en su propia línea: en tarjetas angostas no deja lugar al nombre.
-        Etiqueta(label, Modifier.fillMaxWidth().alpha(if (stale) 0.5f else 1f))
+        Row(Modifier.fillMaxWidth().alpha(if (stale) 0.5f else 1f), verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = RobotColors.Primary)
+                Spacer(Modifier.width(6.dp))
+            }
+            Etiqueta(label, Modifier.weight(1f))
+        }
         if (stale) {
             Spacer(Modifier.height(4.dp))
             EtiquetaAntiguo()
