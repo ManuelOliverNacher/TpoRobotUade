@@ -3,6 +3,7 @@ package com.uade.robotcierre.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -26,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.uade.robotcierre.model.CommandType
 import com.uade.robotcierre.model.ConnectionState
@@ -183,36 +185,62 @@ private fun TelemetrySection(t: Telemetry, state: UiState) {
         }
     }
 
-    // Datos propios del servicio.
-    Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    // Datos propios del servicio. Si el ancho no alcanza para tres tarjetas (pantallas de 360 dp o
+    // letra agrandada), las etiquetas se partirían a mitad de palabra: se acomodan 2 + 1.
+    val people: @Composable (Modifier) -> Unit = { mod ->
         TarjetaDato(
             "Personas detectadas",
             t.peopleDetected.toString(),
-            Modifier.weight(1f).fillMaxHeight(),
+            mod,
             tone = if (t.peopleDetected > 0) Tone.ERROR else Tone.NEUTRAL,
             stale = stale,
             valueStyle = RobotText.Title,
             fitValue = true
         )
+    }
+    val verified: @Composable (Modifier) -> Unit = { mod ->
         TarjetaDato(
             "Zonas verificadas",
             verifiedText(t),
-            Modifier.weight(1f).fillMaxHeight(),
+            mod,
             stale = stale,
             valueStyle = RobotText.Title,
             fitValue = true
         )
+    }
+    val localization: @Composable (Modifier) -> Unit = { mod ->
         TarjetaDato(
             "Localización",
             t.localizationQuality.label(),
-            Modifier.weight(1f).fillMaxHeight(),
+            mod,
             tone = if (t.localizationQuality == LocalizationQuality.DEGRADED) Tone.WARNING else Tone.NEUTRAL,
             stale = stale,
             valueStyle = RobotText.Title,
             fitValue = true
         )
     }
+    BoxWithConstraints {
+        val narrow = maxWidth < MIN_WIDTH_FOR_THREE_CARDS || LocalDensity.current.fontScale > 1.1f
+        if (narrow) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    people(Modifier.weight(1f).fillMaxHeight())
+                    verified(Modifier.weight(1f).fillMaxHeight())
+                }
+                localization(Modifier.fillMaxWidth())
+            }
+        } else {
+            Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                people(Modifier.weight(1f).fillMaxHeight())
+                verified(Modifier.weight(1f).fillMaxHeight())
+                localization(Modifier.weight(1f).fillMaxHeight())
+            }
+        }
+    }
 }
+
+/** Ancho útil mínimo para dibujar las tres tarjetas propias en una fila sin partir las etiquetas. */
+private val MIN_WIDTH_FOR_THREE_CARDS = 366.dp
 
 @Composable
 private fun ControlSection(state: UiState, onEvent: (RobotUiEvent) -> Unit) {
