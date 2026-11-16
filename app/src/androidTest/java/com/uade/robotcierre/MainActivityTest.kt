@@ -52,14 +52,14 @@ class MainActivityTest {
     @Test
     fun elViewModelSobreviveARecrearLaActividadYSeMantieneLaPantalla() {
         rule.onNodeWithText("Supervisar").performClick()
-        rule.onNodeWithText("Panel de supervisión").assertIsDisplayed()
+        rule.onNodeWithText("Control").assertIsDisplayed()
 
         lateinit var before: RobotViewModel
         rule.activityRule.scenario.onActivity { before = viewModelOf(it) }
         rule.activityRule.scenario.recreate()
         rule.activityRule.scenario.onActivity { assertSame(before, viewModelOf(it)) }
 
-        rule.onNodeWithText("Panel de supervisión").assertIsDisplayed()
+        rule.onNodeWithText("Control").assertIsDisplayed() // sigue en el Panel
     }
 
     @Test

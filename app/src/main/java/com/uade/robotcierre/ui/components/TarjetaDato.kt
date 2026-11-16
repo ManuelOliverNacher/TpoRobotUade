@@ -3,16 +3,15 @@ package com.uade.robotcierre.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.uade.robotcierre.ui.theme.RobotColors
 import com.uade.robotcierre.ui.theme.RobotText
@@ -29,6 +28,7 @@ fun TarjetaDato(
     tone: Tone = Tone.NEUTRAL,
     updatedAt: String? = null,
     stale: Boolean = false,
+    valueStyle: TextStyle = RobotText.BigData,
     extra: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     val valueColor = when (tone) {
@@ -44,13 +44,15 @@ fun TarjetaDato(
         else -> RobotColors.Border
     }
     Column(modifier.robotCard(borderColor = border).padding(12.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Etiqueta(label, Modifier.weight(1f).alpha(if (stale) 0.5f else 1f))
-            if (stale) EtiquetaAntiguo()
+        // La etiqueta ANTIGUO va en su propia línea: en tarjetas angostas no deja lugar al nombre.
+        Etiqueta(label, Modifier.fillMaxWidth().alpha(if (stale) 0.5f else 1f))
+        if (stale) {
+            Spacer(Modifier.height(4.dp))
+            EtiquetaAntiguo()
         }
         Column(Modifier.alpha(if (stale) 0.5f else 1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Spacer(Modifier.height(4.dp))
-            Text(value, style = RobotText.BigData, color = valueColor)
+            Text(value, style = valueStyle, color = valueColor)
             extra?.invoke(this)
             if (updatedAt != null) {
                 Text("Actualizado $updatedAt", style = RobotText.Small, color = RobotColors.TextSecondary)

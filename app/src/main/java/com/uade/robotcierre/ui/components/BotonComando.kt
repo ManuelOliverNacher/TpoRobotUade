@@ -25,7 +25,7 @@ import com.uade.robotcierre.ui.theme.RobotText
 
 /**
  * Botón de comando de 52 px de alto. Si [enabled] es false se ve deshabilitado y muestra
- * debajo el [reason] en 12 px. [tone] elige normal (primario), advertencia o error (rojo).
+ * debajo el [reason] en 12 px; habilitado puede mostrar un [hint]. [tone] elige normal (primario), advertencia o error (rojo).
  */
 @Composable
 fun BotonComando(
@@ -35,7 +35,8 @@ fun BotonComando(
     icon: ImageVector? = null,
     enabled: Boolean = true,
     reason: String? = null,
-    tone: Tone = Tone.NEUTRAL
+    tone: Tone = Tone.NEUTRAL,
+    hint: String? = null
 ) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Button(
@@ -57,9 +58,11 @@ fun BotonComando(
             }
             Text(text, style = RobotText.Subtitle, textAlign = TextAlign.Center, maxLines = 2)
         }
-        if (!enabled && reason != null) {
+        // Deshabilitado: el motivo. Habilitado: una pista opcional (por ejemplo, la zona a revisar).
+        val caption = if (!enabled) reason else hint
+        if (caption != null) {
             Text(
-                reason,
+                caption,
                 style = RobotText.Small,
                 color = RobotColors.TextSecondary,
                 textAlign = TextAlign.Center,

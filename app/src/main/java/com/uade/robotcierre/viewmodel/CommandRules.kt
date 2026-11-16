@@ -54,7 +54,7 @@ object CommandRules {
             return CommandAvailability.disabled("Sin conexión con el robot.")
         }
         if (type in input.pendingTypes) {
-            return CommandAvailability.disabled("Esperando respuesta del robot…")
+            return CommandAvailability.disabled("Esperando respuesta…")
         }
 
         val criticalAlert = input.activeAlerts.any { it.severity == Severity.CRITICAL }
