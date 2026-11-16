@@ -50,6 +50,11 @@ data class UiState(
     /** Comando que espera confirmación del operador (cancelar o detener), o null. */
     val confirmation: CommandType? = null,
     val simulationAvailable: Boolean = false,
+    /**
+     * true desde que vuelve la conexión (llega telemetría nueva tras una pérdida o datos antiguos)
+     * hasta que el operador envía una orden o pasan 10 s. La UI muestra "Conexión recuperada".
+     */
+    val connectionRecovered: Boolean = false,
     val batteryLevel: BatteryLevel = BatteryLevel.OK,
     /** Historial (Room): rondas, de la más nueva a la más vieja. Vacío si no hay historial. */
     val missions: List<MissionRecord> = emptyList(),

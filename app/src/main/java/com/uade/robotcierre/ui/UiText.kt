@@ -9,6 +9,7 @@ import com.uade.robotcierre.model.MissionResult
 import com.uade.robotcierre.model.RobotState
 import com.uade.robotcierre.model.Severity
 import com.uade.robotcierre.model.ZoneStatus
+import com.uade.robotcierre.viewmodel.SimulationAction
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -53,6 +54,15 @@ fun EventType.label() = when (this) {
     EventType.CONNECTION_LOST -> "Conexión perdida"
     EventType.OBSTACLE -> "Obstáculo"
     EventType.MISSION_COMPLETE -> "Ronda completa"
+}
+
+fun SimulationAction.label() = when (this) {
+    SimulationAction.DISCONNECT -> "Forzar desconexión"
+    SimulationAction.RECONNECT -> "Reconectar"
+    SimulationAction.REJECT_NEXT_COMMAND -> "Rechazar próxima orden"
+    SimulationAction.LOW_BATTERY -> "Batería baja"
+    SimulationAction.PERSON_DETECTED -> "Persona detectada"
+    SimulationAction.ZONE_NOT_VERIFIABLE -> "Zona no verificable"
 }
 
 fun Severity.label() = when (this) {

@@ -51,6 +51,7 @@ class RobotViewModel(
         val confirmation: CommandType? = null,
         val linkLost: Boolean = false,
         val linkLostAt: Long = 0L,
+        val recovered: Boolean = false,
         val missions: List<MissionRecord> = emptyList(),
         val eventsOutsideMissions: List<EventRecord> = emptyList(),
         val selectedMissionId: Long? = null,
@@ -64,6 +65,7 @@ class RobotViewModel(
     private var commandCounter = 0
     private var staleJob: Job? = null
     private var selectedJob: Job? = null
+    private var recoveredJob: Job? = null
     private val recorder = history?.let { HistoryRecorder(it, viewModelScope, clock, historyOnError) }
 
     init {
@@ -104,6 +106,7 @@ class RobotViewModel(
     private fun onTelemetry(t: Telemetry) {
         recorder?.onTelemetry(t)
         staleJob?.cancel()
+        val wasRecovered = core.recovered
         update { c ->
             var alerts = c.alerts
             var linkLost = c.linkLost
@@ -122,12 +125,21 @@ class RobotViewModel(
                     if (!it.closed && it.receivedAt < t.timestamp) it.copy(closed = true) else it
                 }
             }
-            c.copy(telemetry = t, stale = false, alerts = alerts, linkLost = linkLost)
+            // Volvió la conexión: había una pérdida o datos antiguos y ahora llega un paquete válido.
+            val recovered = if ((c.stale || c.linkLost) && !linkLost) true else c.recovered
+            c.copy(telemetry = t, stale = false, alerts = alerts, linkLost = linkLost, recovered = recovered)
+        }
+        if (!wasRecovered && core.recovered) {
+            recoveredJob?.cancel()
+            recoveredJob = viewModelScope.launch {
+                delay(RECOVERED_BANNER_MILLIS)
+                update { it.copy(recovered = false) }
+            }
         }
         // Pasados más de 5 s sin paquete nuevo, los datos se marcan como antiguos.
         staleJob = viewModelScope.launch {
             delay(STALE_AFTER_MILLIS + 1)
-            update { it.copy(stale = true) }
+            update { it.copy(stale = true, recovered = false) }
         }
     }
 
@@ -140,7 +152,8 @@ class RobotViewModel(
             c.copy(
                 alerts = (listOf(alert) + c.alerts).take(MAX_ALERTS),
                 linkLost = c.linkLost || lost,
-                linkLostAt = if (lost) now else c.linkLostAt
+                linkLostAt = if (lost) now else c.linkLostAt,
+                recovered = c.recovered && !lost
             )
         }
     }
@@ -172,10 +185,15 @@ class RobotViewModel(
             expiresInSeconds = EXPIRES_IN_SECONDS,
             zone = zone
         )
+        // Al enviar una orden el operador ya vio el aviso de conexión recuperada.
+        recoveredJob?.cancel()
         // Desde el envío hasta la respuesta la orden figura como PENDING.
         update {
-            it.copy(commands = (listOf(CommandRecord(command, CommandStatus.PENDING)) + it.commands)
-                .take(MAX_COMMANDS))
+            it.copy(
+                recovered = false,
+                commands = (listOf(CommandRecord(command, CommandStatus.PENDING)) + it.commands)
+                    .take(MAX_COMMANDS)
+            )
         }
         viewModelScope.launch {
             val response = try {
@@ -288,6 +306,7 @@ class RobotViewModel(
             zonesNeedingReview = CommandRules.zonesNeedingReview(t),
             confirmation = c.confirmation,
             simulationAvailable = simulation != null,
+            connectionRecovered = c.recovered,
             missions = c.missions,
             eventsOutsideMissions = c.eventsOutsideMissions,
             selectedMissionId = c.selectedMissionId,
@@ -304,6 +323,9 @@ class RobotViewModel(
     companion object {
         /** Pasado este tiempo sin telemetría nueva los datos se marcan como antiguos. */
         const val STALE_AFTER_MILLIS = 5_000L
+
+        /** El aviso de conexión recuperada se retira solo pasado este tiempo. */
+        const val RECOVERED_BANNER_MILLIS = 10_000L
         private const val EXPIRES_IN_SECONDS = 10
         private const val MAX_COMMANDS = 20
         private const val MAX_ALERTS = 100

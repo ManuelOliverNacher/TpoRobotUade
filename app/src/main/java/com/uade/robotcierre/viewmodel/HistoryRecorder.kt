@@ -84,10 +84,12 @@ class HistoryRecorder(
         when (op) {
             is Op.Tel -> processTelemetry(op.telemetry, op.at)
             is Op.Event -> {
-                eventRows[op.event.eventId] = history.insertEvent(missionRowId, op.event, op.at)
-                if (op.event.type == EventType.MISSION_COMPLETE && missionRowId != null) {
-                    completedSeen = true
-                }
+                // El aviso de fin de ronda y el último paquete (que cierra la ronda) salen en el mismo
+                // segundo y pueden llegar en cualquier orden: el aviso siempre es de la última ronda.
+                val completion = op.event.type == EventType.MISSION_COMPLETE
+                val target = missionRowId ?: if (completion) lastClosedId else null
+                eventRows[op.event.eventId] = history.insertEvent(target, op.event, op.at)
+                if (completion && missionRowId != null) completedSeen = true
             }
             is Op.AlertClosed -> eventRows[op.eventId]?.let { history.markEventAcknowledged(it) }
             is Op.CommandConfirmed -> if (missionRowId != null) {

@@ -37,7 +37,7 @@ class MainActivityTest {
             rule.onNodeWithText(it).assertIsDisplayed()
         }
         rule.onNodeWithText("Alertas").performClick()
-        rule.onNodeWithText("Alertas del robot").assertIsDisplayed()
+        rule.onNodeWithText("No hay alertas.").assertIsDisplayed()
     }
 
     @Test

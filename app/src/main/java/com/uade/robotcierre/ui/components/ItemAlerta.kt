@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.uade.robotcierre.model.Severity
 import com.uade.robotcierre.ui.formatTime
@@ -38,7 +39,8 @@ import com.uade.robotcierre.viewmodel.AlertUi
 fun ItemAlerta(
     alert: AlertUi,
     modifier: Modifier = Modifier,
-    onAcknowledge: (() -> Unit)? = null
+    onAcknowledge: (() -> Unit)? = null,
+    guidance: String? = null
 ) {
     val event = alert.event
     val tone = event.severity.tone()
@@ -66,6 +68,9 @@ fun ItemAlerta(
             val where = listOfNotNull(event.zone?.label, formatTime(alert.receivedAt)).joinToString(" · ")
             Text(where, style = RobotText.Small, color = RobotColors.TextSecondary)
             Text(event.details, style = RobotText.Body, color = RobotColors.Text)
+            if (guidance != null && !alert.closed) {
+                Text(guidance, style = RobotText.Body.copy(fontWeight = FontWeight.SemiBold), color = RobotColors.Text)
+            }
             if (!alert.closed && onAcknowledge != null) {
                 BotonComando(
                     text = "Reconocer",

@@ -50,7 +50,8 @@ class SupervisionPanelScreenTest {
         }
     }
 
-    private fun count(text: String) = rule.onAllNodesWithText(text).fetchSemanticsNodes().size
+    private fun count(text: String, substring: Boolean = false) =
+        rule.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().size
 
     private val disclaimer = "Es un comando de software simulado. No reemplaza una parada de emergencia física."
 
@@ -183,6 +184,29 @@ class SupervisionPanelScreenTest {
         assertTrue(seeAlertsCalled)
         rule.onNodeWithText("Reanudar ronda").performScrollTo().assertIsNotEnabled()
         rule.onNodeWithText("Reconocé la alerta antes de reanudar.").assertExists()
+    }
+
+    @Test
+    fun sinConexionSeMuestraElBannerRojoFijoConLaUltimaActualizacion() {
+        show(uiStateOf(telemetryOf(RobotState.ON_MISSION, Zone.LAWN), linkLost = true))
+        rule.onNodeWithText("Sin conexión con el robot. Última actualización", substring = true).assertIsDisplayed()
+        assertEquals(0, count("Datos antiguos (más de 5 s). No representan el estado actual."))
+        assertEquals(0, count("Conexión recuperada.")) // todavía no volvió
+    }
+
+    @Test
+    fun alRecuperarLaConexionConLaRondaPausadaElBannerVerdePideReanudar() {
+        show(uiStateOf(telemetryOf(RobotState.PAUSED, Zone.LAWN), recovered = true))
+        rule.onNodeWithText("Conexión recuperada. Reanudá la ronda cuando estés listo.").assertIsDisplayed()
+        assertEquals(0, count("Sin conexión con el robot. Última actualización", substring = true))
+        rule.onNodeWithText("Reanudar ronda").performScrollTo().assertIsEnabled()
+    }
+
+    @Test
+    fun alRecuperarLaConexionSinRondaPausadaElAvisoEsCorto() {
+        show(uiStateOf(telemetryOf(), recovered = true))
+        rule.onNodeWithText("Conexión recuperada.").assertIsDisplayed()
+        assertEquals(0, count("Reanudá la ronda", substring = true))
     }
 
     @Test

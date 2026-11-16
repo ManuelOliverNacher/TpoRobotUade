@@ -3,6 +3,7 @@ package com.uade.robotcierre.ui.components
 import com.uade.robotcierre.model.CommandStatus
 import com.uade.robotcierre.model.ConnectionState
 import com.uade.robotcierre.model.EventType
+import com.uade.robotcierre.model.MissionResult
 import com.uade.robotcierre.model.Severity
 import com.uade.robotcierre.model.ZoneStatus
 import com.uade.robotcierre.ui.label
@@ -35,6 +36,16 @@ fun ZoneStatus.chip() = ChipSpec(
         ZoneStatus.NOT_VERIFIABLE -> Tone.WARNING
         ZoneStatus.MANUAL_REVIEW -> Tone.WARNING
         ZoneStatus.VERIFIED_MANUALLY -> Tone.INFO
+    }
+)
+
+fun MissionResult.chip() = ChipSpec(
+    label(),
+    when (this) {
+        MissionResult.IN_PROGRESS -> Tone.INFO
+        MissionResult.COMPLETED -> Tone.OK
+        MissionResult.CANCELLED, MissionResult.RETURNED_EARLY -> Tone.WARNING
+        MissionResult.INTERRUPTED -> Tone.ERROR
     }
 )
 

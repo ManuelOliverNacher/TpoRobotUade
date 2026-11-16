@@ -134,6 +134,21 @@ class HistoryRecorderTest {
     }
 
     @Test
+    fun elAvisoDeFinDeRondaQueLlegaDespuesDelCierreSeAsociaALaRondaCerrada() = runTest {
+        val e = env()
+        mission(e)
+        arrive(e, done()) // el último paquete cierra la ronda antes de que llegue el aviso
+        e.recorder.onEvent(testEvent("E-9", EventType.MISSION_COMPLETE, Severity.INFO, acknowledged = true))
+        runCurrent()
+        assertEquals(e.fake.missionsNow.single().id, e.fake.eventsNow.single().missionId)
+
+        // Cualquier otro evento posterior al cierre sigue siendo "fuera de una ronda".
+        e.recorder.onEvent(testEvent("E-10", EventType.CONNECTION_LOST, Severity.CRITICAL))
+        runCurrent()
+        assertNull(e.fake.eventsNow.last().missionId)
+    }
+
+    @Test
     fun laRevisionManualPosteriorSumaLaZonaALaRondaCerradaYNoALaSiguiente() = runTest {
         val e = env()
         mission(e)

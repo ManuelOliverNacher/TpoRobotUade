@@ -34,6 +34,8 @@ import com.uade.robotcierre.model.RobotState
 import com.uade.robotcierre.model.Telemetry
 import com.uade.robotcierre.ui.components.BannerAviso
 import com.uade.robotcierre.ui.components.BarraBateria
+import com.uade.robotcierre.ui.components.BarraSuperior
+import com.uade.robotcierre.ui.components.ProgresoSegmentado
 import com.uade.robotcierre.ui.components.BotonComando
 import com.uade.robotcierre.ui.components.ChipEstado
 import com.uade.robotcierre.ui.components.ItemOrden
@@ -59,10 +61,17 @@ fun SupervisionPanelScreen(
     state: UiState,
     onEvent: (RobotUiEvent) -> Unit,
     onSeeAlerts: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenSimulation: (() -> Unit)? = null
 ) {
     Column(modifier.fillMaxSize()) {
-        PanelTopBar(state)
+        BarraSuperior(
+            title = RobotInfo.ID,
+            subtitle = updatedText(state),
+            chip = state.connectionEffective.chip(),
+            onOpenSimulation = onOpenSimulation
+        )
+        ConnectionBanners(state)
         Column(
             Modifier
                 .weight(1f)
@@ -94,25 +103,30 @@ fun SupervisionPanelScreen(
     }
 }
 
+/**
+ * Banners fijos (no se desplazan) bajo la barra: rojo mientras no hay conexión y verde al recuperarla.
+ * Con la ronda pausada por la pérdida, el verde recuerda que hay que reanudarla.
+ */
 @Composable
-private fun PanelTopBar(state: UiState) {
+private fun ConnectionBanners(state: UiState) {
+    val t = state.telemetry
+    val lost = state.connectionEffective == ConnectionState.DISCONNECTED && t != null
+    if (!lost && !state.connectionRecovered) return
     Column(
-        Modifier
-            .fillMaxWidth()
-            .background(RobotColors.Primary)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                RobotInfo.ID,
-                style = RobotText.Title,
-                color = Color.White,
-                modifier = Modifier.weight(1f)
-            )
-            ChipEstado(state.connectionEffective.chip())
+        if (lost) {
+            val last = state.lastUpdateMillis?.let { " Última actualización ${formatTime(it)}." }.orEmpty()
+            BannerAviso("Sin conexión con el robot.$last", Tone.ERROR)
         }
-        val updated = state.lastUpdateMillis?.let { "Actualizado ${formatTime(it)}" } ?: "Sin datos todavía"
-        Text(updated, style = RobotText.Small, color = Color.White.copy(alpha = 0.85f))
+        if (state.connectionRecovered) {
+            val paused = t?.state == RobotState.PAUSED
+            BannerAviso(
+                if (paused) "Conexión recuperada. Reanudá la ronda cuando estés listo." else "Conexión recuperada.",
+                Tone.OK
+            )
+        }
     }
 }
 
@@ -135,7 +149,7 @@ private fun TelemetrySection(t: Telemetry, state: UiState) {
         stale = stale
     ) {
         Text(progressText(t), style = RobotText.Body, color = RobotColors.Text)
-        SegmentedProgress(done = t.checkpoint, total = t.total)
+        ProgresoSegmentado(done = t.checkpoint, total = t.total)
     }
 
     // Batería y movimiento.
@@ -158,7 +172,8 @@ private fun TelemetrySection(t: Telemetry, state: UiState) {
             value = movementText(t),
             modifier = Modifier.weight(1f).fillMaxHeight(),
             stale = stale,
-            valueStyle = RobotText.Title
+            valueStyle = RobotText.Title,
+            fitValue = true
         ) {
             Text(
                 if (t.moving) speedText(t) else "0,0 m/s",
@@ -176,14 +191,16 @@ private fun TelemetrySection(t: Telemetry, state: UiState) {
             Modifier.weight(1f).fillMaxHeight(),
             tone = if (t.peopleDetected > 0) Tone.ERROR else Tone.NEUTRAL,
             stale = stale,
-            valueStyle = RobotText.Title
+            valueStyle = RobotText.Title,
+            fitValue = true
         )
         TarjetaDato(
             "Zonas verificadas",
             verifiedText(t),
             Modifier.weight(1f).fillMaxHeight(),
             stale = stale,
-            valueStyle = RobotText.Title
+            valueStyle = RobotText.Title,
+            fitValue = true
         )
         TarjetaDato(
             "Localización",
@@ -191,26 +208,9 @@ private fun TelemetrySection(t: Telemetry, state: UiState) {
             Modifier.weight(1f).fillMaxHeight(),
             tone = if (t.localizationQuality == LocalizationQuality.DEGRADED) Tone.WARNING else Tone.NEUTRAL,
             stale = stale,
-            valueStyle = RobotText.Title
+            valueStyle = RobotText.Title,
+            fitValue = true
         )
-    }
-}
-
-/** Barra de [total] segmentos: los primeros [done] están completos. */
-@Composable
-private fun SegmentedProgress(done: Int, total: Int, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        repeat(total) { index ->
-            Box(
-                Modifier
-                    .weight(1f)
-                    .height(8.dp)
-                    .background(
-                        if (index < done) RobotColors.Primary else RobotColors.DisabledBg,
-                        RoundedCornerShape(4.dp)
-                    )
-            )
-        }
     }
 }
 

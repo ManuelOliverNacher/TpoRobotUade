@@ -21,8 +21,11 @@ import com.uade.robotcierre.model.CommandType
 import com.uade.robotcierre.ui.components.ModalConfirmacion
 import com.uade.robotcierre.ui.navigation.MainScaffold
 import com.uade.robotcierre.ui.navigation.MainTab
-import com.uade.robotcierre.ui.navigation.PlaceholderScreen
+import com.uade.robotcierre.ui.screens.AlertsScreen
+import com.uade.robotcierre.ui.screens.HistoryScreen
 import com.uade.robotcierre.ui.screens.RobotSelectionScreen
+import com.uade.robotcierre.ui.screens.RoundsScreen
+import com.uade.robotcierre.ui.screens.SimulationSheet
 import com.uade.robotcierre.ui.screens.SupervisionPanelScreen
 import com.uade.robotcierre.ui.theme.RobotColors
 import com.uade.robotcierre.viewmodel.RobotUiEvent
@@ -37,6 +40,10 @@ fun RobotCierreApp(viewModel: RobotViewModel) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var supervising by rememberSaveable { mutableStateOf(false) }
     var tab by rememberSaveable { mutableStateOf(MainTab.PANEL) }
+    var showSimulation by rememberSaveable { mutableStateOf(false) }
+    // El ícono "Simulación" solo existe en modo demo (cuando el ViewModel recibió el simulador).
+    val openSimulation: (() -> Unit)? =
+        if (state.simulationAvailable) fun() { showSimulation = true } else null
 
     // Atrás: de otra pestaña vuelve al Panel; del Panel vuelve a la selección de robot.
     BackHandler(enabled = supervising) {
@@ -60,13 +67,24 @@ fun RobotCierreApp(viewModel: RobotViewModel) {
                         MainTab.PANEL -> SupervisionPanelScreen(
                             state = state,
                             onEvent = viewModel::onEvent,
-                            onSeeAlerts = { tab = MainTab.ALERTAS }
+                            onSeeAlerts = { tab = MainTab.ALERTAS },
+                            onOpenSimulation = openSimulation
                         )
-                        else -> PlaceholderScreen(current)
+                        MainTab.RONDAS -> RoundsScreen(state, viewModel::onEvent, onOpenSimulation = openSimulation)
+                        MainTab.ALERTAS -> AlertsScreen(state, viewModel::onEvent, onOpenSimulation = openSimulation)
+                        MainTab.HISTORIAL -> HistoryScreen(state, viewModel::onEvent, onOpenSimulation = openSimulation)
                     }
                 }
             }
         }
+    }
+
+    if (showSimulation && state.simulationAvailable) {
+        SimulationSheet(
+            state = state,
+            onAction = { viewModel.onEvent(RobotUiEvent.Simulate(it)) },
+            onDismiss = { showSimulation = false }
+        )
     }
 
     // Modal de confirmación: Cancelar ronda y Detención operativa piden confirmar antes de enviarse.

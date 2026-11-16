@@ -11,14 +11,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.uade.robotcierre.ui.theme.RobotColors
 import com.uade.robotcierre.ui.theme.RobotText
 
 /**
  * Tarjeta con etiqueta + valor grande + hora de actualización. Con [stale] el contenido se ve al 50 %
- * y lleva la etiqueta ANTIGUO: los datos no representan el estado actual.
+ * y lleva la etiqueta ANTIGUO: los datos no representan el estado actual. Con [fitValue] el valor
+ * se ajusta al ancho de la tarjeta.
  */
 @Composable
 fun TarjetaDato(
@@ -29,6 +32,7 @@ fun TarjetaDato(
     updatedAt: String? = null,
     stale: Boolean = false,
     valueStyle: TextStyle = RobotText.BigData,
+    fitValue: Boolean = false,
     extra: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     val valueColor = when (tone) {
@@ -52,7 +56,19 @@ fun TarjetaDato(
         }
         Column(Modifier.alpha(if (stale) 0.5f else 1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Spacer(Modifier.height(4.dp))
-            Text(value, style = valueStyle, color = valueColor)
+            if (fitValue) {
+                // En tarjetas angostas el valor se achica para entrar en una línea (sin cortarse).
+                Text(
+                    value,
+                    style = valueStyle,
+                    color = valueColor,
+                    maxLines = 1,
+                    softWrap = false,
+                    autoSize = TextAutoSize.StepBased(minFontSize = 14.sp, maxFontSize = valueStyle.fontSize)
+                )
+            } else {
+                Text(value, style = valueStyle, color = valueColor)
+            }
             extra?.invoke(this)
             if (updatedAt != null) {
                 Text("Actualizado $updatedAt", style = RobotText.Small, color = RobotColors.TextSecondary)

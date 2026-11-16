@@ -9,11 +9,13 @@ import com.uade.robotcierre.data.AppDatabase
 import com.uade.robotcierre.data.RoomHistoryRepository
 import com.uade.robotcierre.repository.HistoryRepository
 import com.uade.robotcierre.repository.SimulatedRobotRepository
+import com.uade.robotcierre.repository.SimulationConfig
 import com.uade.robotcierre.viewmodel.RobotViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.withContext
 
 /**
  * Contenedor de dependencias (manual). La base Room vive todo el proceso; el simulador del robot
@@ -26,15 +28,21 @@ class AppContainer(context: Context, val demoMode: Boolean = true) {
 
     private val appContext = context.applicationContext
 
+    /** Parámetros del simulador. Solo se cambian en pruebas (por ejemplo, para acelerar una ronda). */
+    var simulationConfig: SimulationConfig = SimulationConfig()
+
     private val database: AppDatabase by lazy { AppDatabase.create(appContext) }
 
     val historyRepository: HistoryRepository by lazy { RoomHistoryRepository(database.historyDao()) }
+
+    /** Borra el historial guardado. Solo para pruebas y depuración. */
+    suspend fun clearHistory() = withContext(Dispatchers.IO) { database.clearAllTables() }
 
     /** Fábrica del [RobotViewModel]. Se pide con `viewModel(factory = …)` una sola vez por Activity. */
     fun createRobotViewModelFactory(): ViewModelProvider.Factory = viewModelFactory {
         initializer {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-            val simulated = SimulatedRobotRepository(scope)
+            val simulated = SimulatedRobotRepository(scope, simulationConfig)
             RobotViewModel(
                 repository = simulated,
                 simulation = if (demoMode) simulated else null,

@@ -2,6 +2,8 @@ package com.uade.robotcierre.ui
 
 import com.uade.robotcierre.model.CommandStatus
 import com.uade.robotcierre.model.CommandType
+import com.uade.robotcierre.model.EventRecord
+import com.uade.robotcierre.model.MissionRecord
 import com.uade.robotcierre.model.ConnectionState
 import com.uade.robotcierre.model.LocalizationQuality
 import com.uade.robotcierre.model.RobotState
@@ -48,9 +50,17 @@ fun uiStateOf(
     telemetry: Telemetry?,
     stale: Boolean = false,
     alerts: List<AlertUi> = emptyList(),
-    commands: List<CommandRecord> = emptyList()
+    commands: List<CommandRecord> = emptyList(),
+    missions: List<MissionRecord> = emptyList(),
+    selectedMissionId: Long? = null,
+    selectedMissionEvents: List<EventRecord> = emptyList(),
+    eventsOutsideMissions: List<EventRecord> = emptyList(),
+    recovered: Boolean = false,
+    simulationAvailable: Boolean = false,
+    linkLost: Boolean = false
 ): UiState {
-    val connected = telemetry != null && !stale && telemetry.connection != ConnectionState.DISCONNECTED
+    val connected = telemetry != null && !stale && !linkLost &&
+        telemetry.connection != ConnectionState.DISCONNECTED
     val input = RuleInput(
         telemetry = telemetry,
         connected = connected,
@@ -61,11 +71,21 @@ fun uiStateOf(
         telemetry = telemetry,
         lastUpdateMillis = telemetry?.timestamp,
         isStale = stale,
-        connectionEffective = if (telemetry == null || stale) ConnectionState.DISCONNECTED else telemetry.connection,
+        connectionEffective = if (telemetry == null || stale || linkLost) {
+            ConnectionState.DISCONNECTED
+        } else {
+            telemetry.connection
+        },
         alerts = alerts,
         commands = commands,
         availability = CommandType.entries.associateWith { CommandRules.evaluate(it, input) },
         zonesNeedingReview = CommandRules.zonesNeedingReview(telemetry),
+        missions = missions,
+        selectedMissionId = selectedMissionId,
+        selectedMissionEvents = selectedMissionEvents,
+        eventsOutsideMissions = eventsOutsideMissions,
+        connectionRecovered = recovered,
+        simulationAvailable = simulationAvailable,
         batteryLevel = telemetry?.let { BatteryLevel.of(it.batteryPercent) } ?: BatteryLevel.OK
     )
 }

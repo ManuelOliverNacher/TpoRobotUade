@@ -282,6 +282,97 @@ class RobotViewModelTest {
         assertTrue(vm.avail(CommandType.START_MISSION).enabled)
     }
 
+    // ------------------------------------------------------ conexión recuperada
+
+    @Test
+    fun alArrancarNoSeMuestraConexionRecuperada() = runTest {
+        val repo = FakeRobotRepository()
+        val vm = newVm(repo)
+        assertFalse(vm.uiState.value.connectionRecovered)
+        push(repo, testTelemetry(timestamp = 0))
+        assertFalse(vm.uiState.value.connectionRecovered)
+    }
+
+    @Test
+    fun trasUnaPerdidaElPrimerPaquetePosteriorMarcaLaConexionRecuperada() = runTest {
+        val repo = FakeRobotRepository()
+        val vm = newVm(repo)
+        push(repo, testTelemetry(state = RobotState.PAUSED, zone = Zone.HALL, timestamp = 0))
+        advanceTimeBy(2_000)
+        runCurrent()
+        pushEvent(repo, testEvent(type = EventType.CONNECTION_LOST, severity = Severity.CRITICAL))
+        assertFalse(vm.uiState.value.connectionRecovered)
+
+        // Un paquete que ya estaba en vuelo no cuenta como reconexión.
+        push(repo, testTelemetry(timestamp = 1_999, sequence = 2))
+        assertFalse(vm.uiState.value.connectionRecovered)
+
+        advanceTimeBy(1_000)
+        runCurrent()
+        push(repo, testTelemetry(state = RobotState.PAUSED, zone = Zone.HALL, timestamp = currentTime, sequence = 3))
+        assertTrue(vm.uiState.value.connectionRecovered)
+    }
+
+    @Test
+    fun tambienSeRecuperaDespuesDeDatosAntiguosSinEventoDePerdida() = runTest {
+        val repo = FakeRobotRepository()
+        val vm = newVm(repo)
+        push(repo, testTelemetry(timestamp = 0))
+        advanceTimeBy(5_001)
+        runCurrent()
+        assertTrue(vm.uiState.value.isStale)
+        assertFalse(vm.uiState.value.connectionRecovered)
+        push(repo, testTelemetry(timestamp = currentTime, sequence = 2))
+        assertTrue(vm.uiState.value.connectionRecovered)
+        assertFalse(vm.uiState.value.isStale)
+    }
+
+    @Test
+    fun elAvisoDeRecuperacionSeRetiraAlEnviarUnaOrdenOPasados10Segundos() = runTest {
+        val repo = FakeRobotRepository()
+        val vm = newVm(repo)
+        fun recover(seq: Long) {
+            push(repo, testTelemetry(timestamp = currentTime, sequence = seq)) // llega un paquete tras la pérdida
+        }
+        push(repo, testTelemetry(timestamp = 0))
+        advanceTimeBy(5_001)
+        runCurrent() // datos antiguos
+        recover(2)
+        assertTrue(vm.uiState.value.connectionRecovered)
+
+        // Un paquete nuevo por segundo no reinicia la cuenta de los 10 s.
+        repeat(9) {
+            advanceTimeBy(1_000)
+            push(repo, testTelemetry(timestamp = currentTime, sequence = 3L + it))
+        }
+        assertTrue("a los 9 s sigue visible", vm.uiState.value.connectionRecovered)
+        advanceTimeBy(1_000)
+        runCurrent()
+        assertFalse("a los 10 s se retira", vm.uiState.value.connectionRecovered)
+
+        // Otra recuperación: se retira apenas el operador envía una orden.
+        advanceTimeBy(5_001)
+        runCurrent()
+        recover(50)
+        assertTrue(vm.uiState.value.connectionRecovered)
+        vm.onEvent(RobotUiEvent.RequestCommand(CommandType.START_MISSION))
+        runCurrent()
+        assertFalse(vm.uiState.value.connectionRecovered)
+    }
+
+    @Test
+    fun siSePierdeOtraVezElAvisoDeRecuperacionDesaparece() = runTest {
+        val repo = FakeRobotRepository()
+        val vm = newVm(repo)
+        push(repo, testTelemetry(timestamp = 0))
+        advanceTimeBy(5_001)
+        runCurrent()
+        push(repo, testTelemetry(timestamp = currentTime, sequence = 2))
+        assertTrue(vm.uiState.value.connectionRecovered)
+        pushEvent(repo, testEvent(type = EventType.CONNECTION_LOST, severity = Severity.CRITICAL))
+        assertFalse(vm.uiState.value.connectionRecovered)
+    }
+
     // ------------------------------------------------------------------ alertas
 
     @Test
