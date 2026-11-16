@@ -72,6 +72,61 @@ class AlertsScreenTest {
         assertTrue("abiertas antes que cerradas", persona < completa && bateria < completa)
     }
 
+    private val lowBattery = alert(
+        "E-2", EventType.LOW_BATTERY, Severity.WARNING,
+        text = "Batería al 20 %. Zonas sin visitar: Explanada y rampa."
+    )
+
+    @Test
+    fun laBateriaBajaOfreceVolverALaBaseYCancelarLaRonda() {
+        show(uiStateOf(telemetryOf(RobotState.ON_MISSION, Zone.LAWN), alerts = listOf(lowBattery)))
+        rule.onNodeWithText("Volver a la base").assertIsDisplayed().assertIsEnabled()
+        rule.onNodeWithText("Cancelar ronda").assertIsDisplayed().assertIsEnabled()
+
+        rule.onNodeWithText("Volver a la base").performClick()
+        rule.onNodeWithText("Cancelar ronda").performClick()
+        assertEquals(
+            listOf<RobotUiEvent>(
+                RobotUiEvent.RequestCommand(CommandType.RETURN_TO_SAFE_POINT),
+                RobotUiEvent.RequestCommand(CommandType.CANCEL_MISSION)
+            ),
+            events
+        )
+    }
+
+    @Test
+    fun conLaRondaPausadaLasAccionesDeBateriaBajaSiguenDisponibles() {
+        show(uiStateOf(telemetryOf(RobotState.PAUSED, Zone.LAWN), alerts = listOf(lowBattery)))
+        rule.onNodeWithText("Volver a la base").assertIsEnabled()
+        rule.onNodeWithText("Cancelar ronda").assertIsEnabled()
+    }
+
+    @Test
+    fun sinRondaEnCursoLasAccionesQuedanDeshabilitadasConSuMotivo() {
+        show(uiStateOf(telemetryOf(), alerts = listOf(lowBattery)))
+        rule.onNodeWithText("Volver a la base").assertIsNotEnabled()
+        rule.onNodeWithText("Cancelar ronda").assertIsNotEnabled()
+        rule.onNodeWithText("El robot ya está en la base.").assertExists()
+        rule.onNodeWithText("La ronda ya finalizó.").assertExists()
+    }
+
+    @Test
+    fun sinConexionLasAccionesDeBateriaBajaNoSePuedenUsar() {
+        show(uiStateOf(telemetryOf(RobotState.ON_MISSION, Zone.LAWN), stale = true, alerts = listOf(lowBattery)))
+        rule.onNodeWithText("Volver a la base").assertIsNotEnabled()
+        rule.onNodeWithText("Cancelar ronda").assertIsNotEnabled()
+        assertEquals(2, count("Sin conexión con el robot.") - 1) // una la usa "Reconocer alertas"
+    }
+
+    @Test
+    fun unaAlertaDeBateriaCerradaOOtrosTiposNoOfrecenEsasAcciones() {
+        val closed = lowBattery.copy(closed = true)
+        val person = alert("E-1", EventType.PERSON_DETECTED, Severity.CRITICAL, Zone.PERGOLA, "Persona detectada.")
+        show(uiStateOf(telemetryOf(RobotState.PAUSED, Zone.PERGOLA), alerts = listOf(closed, person)))
+        assertEquals(0, count("Volver a la base"))
+        assertEquals(0, count("Cancelar ronda"))
+    }
+
     @Test
     fun elSubtituloConcuerdaEnSingular() {
         val one = alert("E-1", EventType.LOW_BATTERY, Severity.WARNING, text = "Batería al 20 %.")

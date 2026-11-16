@@ -89,12 +89,11 @@ object CommandRules {
                     CommandAvailability.disabled("Reconocé la alerta antes de reanudar.")
                 else -> CommandAvailability.ENABLED
             }
-            CommandType.CANCEL_MISSION ->
-                if (t.state == RobotState.ON_MISSION || t.state == RobotState.PAUSED) {
-                    CommandAvailability.ENABLED
-                } else {
-                    CommandAvailability.disabled("La ronda ya finalizó.")
-                }
+            CommandType.CANCEL_MISSION -> when (t.state) {
+                RobotState.ON_MISSION, RobotState.PAUSED -> CommandAvailability.ENABLED
+                RobotState.RETURNING -> CommandAvailability.disabled("El robot ya está volviendo a la base.")
+                else -> CommandAvailability.disabled("La ronda ya finalizó.")
+            }
             CommandType.RETURN_TO_SAFE_POINT -> when {
                 t.state == RobotState.IDLE -> CommandAvailability.disabled("El robot ya está en la base.")
                 t.state == RobotState.RETURNING -> CommandAvailability.disabled("El robot ya está volviendo.")

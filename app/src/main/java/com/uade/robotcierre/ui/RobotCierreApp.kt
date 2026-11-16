@@ -10,9 +10,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -41,6 +45,11 @@ fun RobotCierreApp(viewModel: RobotViewModel) {
     var supervising by rememberSaveable { mutableStateOf(false) }
     var tab by rememberSaveable { mutableStateOf(MainTab.PANEL) }
     var showSimulation by rememberSaveable { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    // Aviso breve de las acciones de simulación (por ejemplo, "La próxima orden será rechazada.").
+    LaunchedEffect(state.simulationNotice?.id) {
+        state.simulationNotice?.let { snackbarHostState.showSnackbar(it.text, duration = SnackbarDuration.Short) }
+    }
     // El ícono "Simulación" solo existe en modo demo (cuando el ViewModel recibió el simulador).
     val openSimulation: (() -> Unit)? =
         if (state.simulationAvailable) fun() { showSimulation = true } else null
@@ -62,7 +71,12 @@ fun RobotCierreApp(viewModel: RobotViewModel) {
             if (!supervising) {
                 RobotSelectionScreen(state = state, onSupervise = { supervising = true })
             } else {
-                MainScaffold(state = state, tab = tab, onTabSelected = { tab = it }) { current ->
+                MainScaffold(
+                    state = state,
+                    tab = tab,
+                    onTabSelected = { tab = it },
+                    snackbarHostState = snackbarHostState
+                ) { current ->
                     when (current) {
                         MainTab.PANEL -> SupervisionPanelScreen(
                             state = state,

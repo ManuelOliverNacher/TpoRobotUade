@@ -108,6 +108,9 @@ class SimulationFlowTest {
     fun rechazarLaProximaOrdenMuestraElMotivoYLaSiguienteSiSeConfirma() {
         supervise()
         simulate("Rechazar próxima orden")
+        // Aviso breve de que quedó armado (se retira solo a los 4 s).
+        rule.waitForText("La próxima orden será rechazada.")
+        rule.waitUntil(10_000) { count("La próxima orden será rechazada.") == 0 }
         rule.onNodeWithText("Iniciar ronda").performScrollTo().performClick()
         rule.waitForText("Rechazada")
         rule.waitForText("Orden rechazada por el robot (simulación).")
@@ -127,6 +130,38 @@ class SimulationFlowTest {
         waitForSubstring("Zonas sin visitar:", timeoutMillis = 20_000)
         rule.onNodeWithText("Batería baja").assertIsDisplayed()
         rule.onNodeWithText("Explanada y rampa", substring = true).assertExists()
+    }
+
+    @Test
+    fun bateriaBajaPermiteVolverALaBaseDesdeLaAlerta() {
+        startRound()
+        simulate("Batería baja")
+        rule.tab("Alertas").performClick()
+        waitForSubstring("Zonas sin visitar:", timeoutMillis = 20_000)
+
+        rule.onNodeWithText("Volver a la base").performClick()
+        // El robot regresa y la ronda queda como "Volvió antes de terminar".
+        rule.tab("Historial").performClick()
+        rule.waitForText("Volvió antes de terminar", timeoutMillis = 30_000)
+    }
+
+    @Test
+    fun bateriaBajaPermiteCancelarLaRondaConConfirmacion() {
+        startRound()
+        simulate("Batería baja")
+        rule.tab("Alertas").performClick()
+        waitForSubstring("Zonas sin visitar:", timeoutMillis = 20_000)
+
+        rule.onNodeWithText("Cancelar ronda").performClick()
+        rule.onNodeWithText("¿Cancelar la ronda?").assertIsDisplayed()
+        rule.onNodeWithText("Volver").performClick() // no cancela
+        rule.onNodeWithText("¿Cancelar la ronda?").assertDoesNotExist()
+        rule.onNodeWithText("Cancelar ronda").assertIsDisplayed()
+
+        rule.onNodeWithText("Cancelar ronda").performClick()
+        rule.onNodeWithText("Confirmar").performClick()
+        rule.tab("Historial").performClick()
+        rule.waitForText("Cancelada", timeoutMillis = 30_000)
     }
 
     @Test

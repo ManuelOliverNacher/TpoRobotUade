@@ -91,7 +91,17 @@ class SimulacionCapturasTest {
             rule.onAllNodesWithText("Solo para la demostración.").fetchSemanticsNodes().isEmpty()
         }
 
-        rule.onNodeWithText("Iniciar ronda").performScrollTo().performClick()
+        // Rechazar la próxima orden: aviso breve y luego la orden rechazada con su motivo.
+        openSheet()
+        closeSheetWith("Rechazar próxima orden")
+        rule.waitForText("La próxima orden será rechazada.")
+        shot("simulacion_3_aviso_orden_armada")
+        rule.onNode(hasText("Iniciar ronda") and hasClickAction()).performScrollTo().performClick()
+        rule.waitForText("Orden rechazada por el robot (simulación).")
+        rule.onNodeWithText("Orden rechazada por el robot (simulación).").performScrollTo()
+        shot("simulacion_4_orden_rechazada")
+
+        rule.onNode(hasText("Iniciar ronda") and hasClickAction()).performScrollTo().performClick()
         rule.waitForText("En ronda")
         openSheet()
         shot("simulacion_2_hoja_en_ronda")
@@ -120,6 +130,29 @@ class SimulacionCapturasTest {
     }
 
     @Test
+    fun capturaDeBateriaBajaYVolverALaBase() {
+        // Regreso más lento (10 s) para que la captura alcance a mostrar "Volviendo".
+        scenario.close()
+        scenario = launchFreshApp(FastSimulation.copy(returnSeconds = 10))
+        rule.onNodeWithText("Supervisar").performClick()
+        rule.waitForText("Reposo")
+        rule.onNodeWithText("Iniciar ronda").performScrollTo().performClick()
+        rule.waitForText("Punto 2 de 6 · Pasillo de servicios", timeoutMillis = 30_000)
+        scenario.viewModel().let { vm ->
+            rule.runOnUiThread { vm.onEvent(RobotUiEvent.Simulate(SimulationAction.LOW_BATTERY)) }
+        }
+        rule.tab("Alertas").performClick()
+        rule.waitUntil(20_000) {
+            rule.onAllNodesWithText("Zonas sin visitar:", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNodeWithText("Volver a la base").performClick()
+        rule.tab("Panel").performClick()
+        rule.waitForText("Volviendo")
+        scrollToTop()
+        shot("escenario2_volviendo_a_la_base")
+    }
+
+    @Test
     fun capturasDeBateriaBajaYZonaNoVerificable() {
         val vm = { scenario.viewModel() }
         rule.onNodeWithText("Supervisar").performClick()
@@ -134,6 +167,12 @@ class SimulacionCapturasTest {
             rule.onAllNodesWithText("Zonas sin visitar:", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
         shot("escenario2_alertas_bateria_baja")
+
+        // El operador puede cancelar desde la propia alerta (pide confirmación).
+        rule.onNodeWithText("Cancelar ronda").performClick()
+        rule.waitForText("¿Cancelar la ronda?")
+        shot("escenario2_modal_cancelar_desde_la_alerta")
+        rule.onNodeWithText("Volver").performClick()
 
         // Escenario 5: zona no verificable (localización degradada).
         rule.tab("Rondas").performClick()

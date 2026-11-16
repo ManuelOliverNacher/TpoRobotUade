@@ -35,6 +35,9 @@ data class CommandRecord(
     val resolvedAt: Long? = null
 )
 
+/** Aviso breve del panel de simulación (por ejemplo, "La próxima orden será rechazada"). */
+data class SimulationNotice(val id: Int, val text: String)
+
 /** Todo lo que la UI necesita para dibujarse. La UI no calcula nada por su cuenta. */
 data class UiState(
     val telemetry: Telemetry? = null,
@@ -55,6 +58,8 @@ data class UiState(
      * hasta que el operador envía una orden o pasan 10 s. La UI muestra "Conexión recuperada".
      */
     val connectionRecovered: Boolean = false,
+    /** Aviso breve tras una acción de simulación; se retira solo a los 4 s. */
+    val simulationNotice: SimulationNotice? = null,
     val batteryLevel: BatteryLevel = BatteryLevel.OK,
     /** Historial (Room): rondas, de la más nueva a la más vieja. Vacío si no hay historial. */
     val missions: List<MissionRecord> = emptyList(),

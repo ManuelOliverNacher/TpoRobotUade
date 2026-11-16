@@ -1,8 +1,6 @@
 package com.uade.robotcierre.ui.navigation
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -17,9 +15,10 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -41,12 +40,14 @@ fun MainScaffold(
     state: UiState,
     tab: MainTab,
     onTabSelected: (MainTab) -> Unit,
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
-    content: @Composable (MainTab) -> Unit = { PlaceholderScreen(it) }
+    content: @Composable (MainTab) -> Unit
 ) {
     Scaffold(
         modifier = modifier,
         containerColor = RobotColors.Background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             NavigationBar(containerColor = RobotColors.Surface) {
                 MainTab.entries.forEach { item ->
@@ -77,24 +78,5 @@ fun MainScaffold(
         }
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) { content(tab) }
-    }
-}
-
-/** Contenido provisional de cada pestaña hasta que se construyan las pantallas (partes B y C). */
-@Composable
-fun PlaceholderScreen(tab: MainTab) {
-    val title = when (tab) {
-        MainTab.PANEL -> "Panel de supervisión"
-        MainTab.RONDAS -> "Rondas del recorrido"
-        MainTab.ALERTAS -> "Alertas del robot"
-        MainTab.HISTORIAL -> "Historial de rondas"
-    }
-    Column(
-        Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(title, style = RobotText.Title, color = RobotColors.Text)
-        Text("Pantalla en construcción.", style = RobotText.Body, color = RobotColors.TextSecondary)
     }
 }

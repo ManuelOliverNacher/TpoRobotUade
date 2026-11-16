@@ -61,7 +61,7 @@ Tiempos del simulador (valores propuestos por el grupo): cada zona dura **20 s**
 ### 2. Batería baja
 1. Con una ronda en curso: ⚙ → **Batería baja** (lleva la batería a 21 %).
 2. A los ~4 s, al cruzar el 20 %, aparece la alerta **Batería baja** (pestaña Alertas) con las **zonas sin visitar**.
-3. El operador decide en el Panel: **Volver a la base** o **Cancelar ronda**. En el Historial la ronda queda como *Volvió antes de terminar* o *Cancelada*.
+3. La propia alerta ofrece las dos acciones: **Volver a la base** y **Cancelar ronda** (esta pide confirmación). Son las mismas órdenes del Panel y quedan deshabilitadas, con su motivo, si ya no hay ronda en curso. En el Historial la ronda queda como *Volvió antes de terminar* o *Cancelada*.
 
 > Una ronda normal desde 100 % no llega al 20 %: la advertencia solo aparece con esta acción (o después de varias rondas seguidas).
 
@@ -84,7 +84,7 @@ Tiempos del simulador (valores propuestos por el grupo): cada zona dura **20 s**
 3. Al terminar, el resumen de cierre pide la revisión manual de esa zona (y del baño). Tocá **Registrar revisión manual** por cada una (la orden es `MANUAL_REVIEW`).
 
 ### Extra: rechazo de una orden
-⚙ → **Rechazar próxima orden**, y enviá cualquier orden (por ejemplo **Iniciar ronda**): queda **Rechazada** con su motivo. Solo afecta a la siguiente orden.
+⚙ → **Rechazar próxima orden**: aparece un aviso breve ("La próxima orden será rechazada.") y la hoja se cierra. Enviá cualquier orden (por ejemplo **Iniciar ronda**): queda **Rechazada** con su motivo. Solo afecta a la siguiente orden.
 
 ### Reiniciar la demo
 - Cerrar la app descarta el robot simulado: al volver a abrirla hay un robot nuevo, en reposo. Si había una ronda abierta, queda en el historial como *Interrumpida*.
@@ -130,7 +130,7 @@ SimulatedRobotRepository  →  SimulationEngine       RoomHistoryRepository  →
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-Estado actual: **92 tests unitarios y 64 instrumentados**, todos en verde (probados en un emulador Pixel 7 con Android 17). Los reportes HTML quedan en `app/build/reports/tests/testDebugUnitTest/index.html` y `app/build/reports/androidTests/connected/debug/index.html`.
+Estado actual: **100 tests unitarios y 71 instrumentados**, todos en verde (probados en un emulador Pixel 7 con Android 17). Los reportes HTML quedan en `app/build/reports/tests/testDebugUnitTest/index.html` y `app/build/reports/androidTests/connected/debug/index.html`.
 
 > **Cuidado:** los tests instrumentados **borran el historial** de la app instalada en el dispositivo de prueba y la **desinstalan** al terminar. Correrlos en un emulador, no en un celular con datos que quieras conservar.
 
@@ -154,6 +154,7 @@ Clases de capturas: `PanelCapturasTest`, `PantallasCapturasTest` y `SimulacionCa
 | `app/` | Código fuente de la app, tests y el esquema de Room exportado (`app/schemas/`) |
 | `entrega/` | APK instalable |
 | `evidencias/` | Capturas del emulador: selección, panel, rondas, alertas, historial, simulación y los escenarios; incluye el Panel a 360 dp |
+| `docs/contrato-mensajes.md` | Contrato de mensajes (telemetría, comando, respuesta, evento) con ejemplos JSON **generados desde los modelos reales**; un test falla si el documento se desactualiza |
 | `ESPECIFICACION_PANTALLAS.md` | Especificación visual y de pantallas (base del Figma) |
 | `CLAUDE.md` | Reglas y alcance del proyecto |
 

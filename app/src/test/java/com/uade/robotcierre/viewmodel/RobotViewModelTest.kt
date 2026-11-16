@@ -496,6 +496,59 @@ class RobotViewModelTest {
     }
 
     @Test
+    fun rechazarLaProximaOrdenMuestraUnAvisoBreveQueSeRetiraSolo() = runTest {
+        val sim = RecordingSim()
+        val vm = newVm(FakeRobotRepository(), sim)
+        assertNull(vm.uiState.value.simulationNotice)
+
+        vm.onEvent(RobotUiEvent.Simulate(SimulationAction.REJECT_NEXT_COMMAND))
+        val first = vm.uiState.value.simulationNotice!!
+        assertEquals("La próxima orden será rechazada.", first.text)
+
+        advanceTimeBy(RobotViewModel.NOTICE_MILLIS - 1)
+        runCurrent()
+        assertEquals("sigue visible a los 3,999 s", first, vm.uiState.value.simulationNotice)
+        advanceTimeBy(1)
+        runCurrent()
+        assertNull("se retira a los 4 s", vm.uiState.value.simulationNotice)
+    }
+
+    @Test
+    fun unNuevoAvisoReiniciaLaCuentaYTieneOtroId() = runTest {
+        val vm = newVm(FakeRobotRepository(), RecordingSim())
+        vm.onEvent(RobotUiEvent.Simulate(SimulationAction.REJECT_NEXT_COMMAND))
+        val first = vm.uiState.value.simulationNotice!!
+        advanceTimeBy(3_000)
+        runCurrent()
+        vm.onEvent(RobotUiEvent.Simulate(SimulationAction.REJECT_NEXT_COMMAND))
+        val second = vm.uiState.value.simulationNotice!!
+        assertTrue(second.id > first.id)
+
+        advanceTimeBy(3_000) // 6 s desde el primero, 3 s desde el segundo
+        runCurrent()
+        assertNotNull(vm.uiState.value.simulationNotice)
+        advanceTimeBy(1_000)
+        runCurrent()
+        assertNull(vm.uiState.value.simulationNotice)
+    }
+
+    @Test
+    fun lasDemasAccionesDeSimulacionNoMuestranAviso() = runTest {
+        val vm = newVm(FakeRobotRepository(), RecordingSim())
+        SimulationAction.entries.filter { it != SimulationAction.REJECT_NEXT_COMMAND }.forEach {
+            vm.onEvent(RobotUiEvent.Simulate(it))
+            assertNull(vm.uiState.value.simulationNotice)
+        }
+    }
+
+    @Test
+    fun sinSimuladorNoHayAvisoAunqueSePidaRechazar() = runTest {
+        val vm = newVm(FakeRobotRepository(), null)
+        vm.onEvent(RobotUiEvent.Simulate(SimulationAction.REJECT_NEXT_COMMAND))
+        assertNull(vm.uiState.value.simulationNotice)
+    }
+
+    @Test
     fun sinSimuladorLasAccionesSeIgnoran() = runTest {
         val vm = newVm(FakeRobotRepository(), null)
         assertFalse(vm.uiState.value.simulationAvailable)

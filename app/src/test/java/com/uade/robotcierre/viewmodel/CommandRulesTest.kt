@@ -131,9 +131,14 @@ class CommandRulesTest {
     fun cancelarSoloEnCursoOPausada() {
         assertTrue(enabled(CommandType.CANCEL_MISSION, input(state = RobotState.ON_MISSION)))
         assertTrue(enabled(CommandType.CANCEL_MISSION, input(state = RobotState.PAUSED)))
-        listOf(RobotState.IDLE, RobotState.RETURNING, RobotState.STOPPED).forEach {
+        listOf(RobotState.IDLE, RobotState.STOPPED).forEach {
             assertDisabled(CommandType.CANCEL_MISSION, input(state = it), "ya finalizó")
         }
+        // Mientras vuelve a la base no es que la ronda "finalizó": el robot ya está regresando.
+        assertEquals(
+            "El robot ya está volviendo a la base.",
+            CommandRules.evaluate(CommandType.CANCEL_MISSION, input(state = RobotState.RETURNING)).reason
+        )
     }
 
     @Test

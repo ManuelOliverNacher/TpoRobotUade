@@ -30,6 +30,14 @@ import com.uade.robotcierre.ui.label
 import com.uade.robotcierre.ui.theme.RobotColors
 import com.uade.robotcierre.ui.theme.RobotText
 import com.uade.robotcierre.viewmodel.AlertUi
+import com.uade.robotcierre.viewmodel.CommandAvailability
+
+/** Acción que ofrece una alerta abierta (por ejemplo, "Volver a la base" ante batería baja). */
+data class AlertAction(
+    val text: String,
+    val availability: CommandAvailability,
+    val onClick: () -> Unit
+)
 
 /**
  * Alerta con icono de severidad, tipo, zona, hora y botón Reconocer.
@@ -40,7 +48,8 @@ fun ItemAlerta(
     alert: AlertUi,
     modifier: Modifier = Modifier,
     onAcknowledge: (() -> Unit)? = null,
-    guidance: String? = null
+    guidance: String? = null,
+    actions: List<AlertAction> = emptyList()
 ) {
     val event = alert.event
     val tone = event.severity.tone()
@@ -70,6 +79,24 @@ fun ItemAlerta(
             Text(event.details, style = RobotText.Body, color = RobotColors.Text)
             if (guidance != null && !alert.closed) {
                 Text(guidance, style = RobotText.Body.copy(fontWeight = FontWeight.SemiBold), color = RobotColors.Text)
+            }
+            if (!alert.closed && actions.isNotEmpty()) {
+                // Las acciones que no corresponden quedan deshabilitadas con su motivo.
+                Row(
+                    Modifier.padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    actions.forEach { action ->
+                        BotonComando(
+                            text = action.text,
+                            onClick = action.onClick,
+                            modifier = Modifier.weight(1f),
+                            enabled = action.availability.enabled,
+                            reason = action.availability.reason
+                        )
+                    }
+                }
             }
             if (!alert.closed && onAcknowledge != null) {
                 BotonComando(

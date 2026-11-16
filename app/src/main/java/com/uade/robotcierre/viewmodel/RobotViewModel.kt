@@ -52,6 +52,7 @@ class RobotViewModel(
         val linkLost: Boolean = false,
         val linkLostAt: Long = 0L,
         val recovered: Boolean = false,
+        val notice: SimulationNotice? = null,
         val missions: List<MissionRecord> = emptyList(),
         val eventsOutsideMissions: List<EventRecord> = emptyList(),
         val selectedMissionId: Long? = null,
@@ -66,6 +67,8 @@ class RobotViewModel(
     private var staleJob: Job? = null
     private var selectedJob: Job? = null
     private var recoveredJob: Job? = null
+    private var noticeJob: Job? = null
+    private var noticeCounter = 0
     private val recorder = history?.let { HistoryRecorder(it, viewModelScope, clock, historyOnError) }
 
     init {
@@ -247,10 +250,24 @@ class RobotViewModel(
         when (action) {
             SimulationAction.DISCONNECT -> sim.forceDisconnect()
             SimulationAction.RECONNECT -> sim.forceReconnect()
-            SimulationAction.REJECT_NEXT_COMMAND -> sim.rejectNextCommand()
+            SimulationAction.REJECT_NEXT_COMMAND -> {
+                sim.rejectNextCommand()
+                showNotice("La próxima orden será rechazada.")
+            }
             SimulationAction.LOW_BATTERY -> sim.forceLowBattery()
             SimulationAction.PERSON_DETECTED -> sim.forcePersonDetected()
             SimulationAction.ZONE_NOT_VERIFIABLE -> sim.forceZoneNotVerifiable()
+        }
+    }
+
+    /** Muestra un aviso breve; se retira solo pasados [NOTICE_MILLIS]. */
+    private fun showNotice(text: String) {
+        noticeCounter++
+        update { it.copy(notice = SimulationNotice(noticeCounter, text)) }
+        noticeJob?.cancel()
+        noticeJob = viewModelScope.launch {
+            delay(NOTICE_MILLIS)
+            update { it.copy(notice = null) }
         }
     }
 
@@ -307,6 +324,7 @@ class RobotViewModel(
             confirmation = c.confirmation,
             simulationAvailable = simulation != null,
             connectionRecovered = c.recovered,
+            simulationNotice = c.notice,
             missions = c.missions,
             eventsOutsideMissions = c.eventsOutsideMissions,
             selectedMissionId = c.selectedMissionId,
@@ -326,6 +344,9 @@ class RobotViewModel(
 
         /** El aviso de conexión recuperada se retira solo pasado este tiempo. */
         const val RECOVERED_BANNER_MILLIS = 10_000L
+
+        /** Los avisos breves del panel de simulación se retiran solos pasado este tiempo. */
+        const val NOTICE_MILLIS = 4_000L
         private const val EXPIRES_IN_SECONDS = 10
         private const val MAX_COMMANDS = 20
         private const val MAX_ALERTS = 100
