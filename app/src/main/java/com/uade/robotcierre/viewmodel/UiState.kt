@@ -11,7 +11,18 @@ import com.uade.robotcierre.model.Telemetry
 import com.uade.robotcierre.model.Zone
 
 /** Nivel de batería para el estado visual (normal / advertencia / error). */
-enum class BatteryLevel { OK, WARNING, CRITICAL }
+enum class BatteryLevel {
+    OK, WARNING, CRITICAL;
+
+    companion object {
+        /** Menos de 10 % = crítica, hasta 20 % = advertencia (umbrales propuestos por el grupo). */
+        fun of(percent: Int): BatteryLevel = when {
+            percent < CommandRules.MIN_BATTERY_TO_START -> CRITICAL
+            percent <= CommandRules.LOW_BATTERY_WARNING -> WARNING
+            else -> OK
+        }
+    }
+}
 
 /** Alerta recibida del robot. [closed] = ya reconocida o resuelta. */
 data class AlertUi(val event: RobotEvent, val receivedAt: Long, val closed: Boolean)

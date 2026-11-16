@@ -1,0 +1,51 @@
+package com.uade.robotcierre
+
+import android.content.Context
+import android.util.Log
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.uade.robotcierre.data.AppDatabase
+import com.uade.robotcierre.data.RoomHistoryRepository
+import com.uade.robotcierre.repository.HistoryRepository
+import com.uade.robotcierre.repository.SimulatedRobotRepository
+import com.uade.robotcierre.viewmodel.RobotViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+
+/**
+ * Contenedor de dependencias (manual). La base Room vive todo el proceso; el simulador del robot
+ * vive solo mientras vive el ViewModel: si la app se cierra y se reabre, arranca un robot nuevo
+ * en reposo (la ronda que quedó abierta se guarda como INTERRUPTED).
+ *
+ * @param demoMode si es true se ofrece el panel de simulación (solo para la demostración).
+ */
+class AppContainer(context: Context, val demoMode: Boolean = true) {
+
+    private val appContext = context.applicationContext
+
+    private val database: AppDatabase by lazy { AppDatabase.create(appContext) }
+
+    val historyRepository: HistoryRepository by lazy { RoomHistoryRepository(database.historyDao()) }
+
+    /** Fábrica del [RobotViewModel]. Se pide con `viewModel(factory = …)` una sola vez por Activity. */
+    fun createRobotViewModelFactory(): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val simulated = SimulatedRobotRepository(scope)
+            RobotViewModel(
+                repository = simulated,
+                simulation = if (demoMode) simulated else null,
+                history = historyRepository,
+                historyOnError = { Log.e(TAG, "No se pudo guardar en el historial", it) },
+                onDispose = { scope.cancel() }
+            )
+        }
+    }
+
+    companion object {
+        const val TAG = "RobotCierre"
+    }
+}

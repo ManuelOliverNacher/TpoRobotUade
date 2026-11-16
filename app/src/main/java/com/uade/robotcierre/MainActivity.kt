@@ -4,44 +4,25 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.runtime.remember
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.uade.robotcierre.ui.RobotCierreApp
 import com.uade.robotcierre.ui.theme.RobotCierreUadeTheme
+import com.uade.robotcierre.viewmodel.RobotViewModel
 
+/** Única Activity. Orientación fija en vertical (ver manifest). */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val container = (application as RobotCierreApplication).container
         setContent {
             RobotCierreUadeTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                // El ViewModel se crea una sola vez por Activity y sobrevive a la recreación.
+                val factory = remember { container.createRobotViewModelFactory() }
+                val viewModel: RobotViewModel = viewModel(factory = factory)
+                RobotCierreApp(viewModel)
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    RobotCierreUadeTheme {
-        Greeting("Android")
     }
 }

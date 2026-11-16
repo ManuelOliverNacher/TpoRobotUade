@@ -38,7 +38,9 @@ class RobotViewModel(
     private val simulation: SimulationControls? = null,
     private val history: HistoryRepository? = null,
     private val clock: () -> Long = System::currentTimeMillis,
-    private val operatorId: String = "operador-1"
+    private val operatorId: String = "operador-1",
+    private val historyOnError: (Throwable) -> Unit = {},
+    private val onDispose: () -> Unit = {}
 ) : ViewModel() {
 
     private data class Core(
@@ -62,7 +64,7 @@ class RobotViewModel(
     private var commandCounter = 0
     private var staleJob: Job? = null
     private var selectedJob: Job? = null
-    private val recorder = history?.let { HistoryRecorder(it, viewModelScope, clock) }
+    private val recorder = history?.let { HistoryRecorder(it, viewModelScope, clock, historyOnError) }
 
     init {
         // Suscripción desde la creación: no se pierden eventos aunque la UI todavía no observe.
@@ -290,13 +292,13 @@ class RobotViewModel(
             eventsOutsideMissions = c.eventsOutsideMissions,
             selectedMissionId = c.selectedMissionId,
             selectedMissionEvents = c.selectedMissionEvents,
-            batteryLevel = when {
-                t == null -> BatteryLevel.OK
-                t.batteryPercent < CommandRules.MIN_BATTERY_TO_START -> BatteryLevel.CRITICAL
-                t.batteryPercent <= CommandRules.LOW_BATTERY_WARNING -> BatteryLevel.WARNING
-                else -> BatteryLevel.OK
-            }
+            batteryLevel = t?.let { BatteryLevel.of(it.batteryPercent) } ?: BatteryLevel.OK
         )
+    }
+
+    /** Se llama al destruirse el ViewModel (por ejemplo, para detener el simulador). */
+    override fun onCleared() {
+        onDispose()
     }
 
     companion object {
