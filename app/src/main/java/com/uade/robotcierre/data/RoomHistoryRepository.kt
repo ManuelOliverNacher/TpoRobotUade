@@ -1,6 +1,7 @@
 package com.uade.robotcierre.data
 
 import com.uade.robotcierre.model.EventRecord
+import com.uade.robotcierre.model.MissionCode
 import com.uade.robotcierre.model.MissionRecord
 import com.uade.robotcierre.model.MissionResult
 import com.uade.robotcierre.model.RobotEvent
@@ -19,6 +20,8 @@ class RoomHistoryRepository(private val dao: HistoryDao) : HistoryRepository {
 
     override fun eventsOf(missionId: Long): Flow<List<EventRecord>> =
         dao.observeEvents(missionId).map { list -> list.map { it.toRecord() } }
+
+    override suspend fun lastMissionNumber(): Int = MissionCode.lastNumber(dao.allMissionCodes())
 
     override suspend fun openMission(code: String, startedAt: Long): Long =
         dao.insertMission(

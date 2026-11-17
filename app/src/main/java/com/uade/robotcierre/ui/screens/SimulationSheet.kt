@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.uade.robotcierre.model.ConnectionState
+import com.uade.robotcierre.model.EventType
 import com.uade.robotcierre.model.RobotState
 import com.uade.robotcierre.model.Zone
 import com.uade.robotcierre.ui.components.BotonComando
@@ -32,6 +33,7 @@ import com.uade.robotcierre.viewmodel.UiState
 fun simulationAvailability(action: SimulationAction, state: UiState): CommandAvailability {
     val t = state.telemetry
     val disconnected = state.connectionEffective == ConnectionState.DISCONNECTED
+    val degraded = state.connectionEffective == ConnectionState.DEGRADED
     fun needsRound(): CommandAvailability? = when {
         disconnected -> CommandAvailability.disabled("Sin conexión con el robot.")
         t?.state != RobotState.ON_MISSION -> CommandAvailability.disabled("Requiere una ronda en curso.")
@@ -40,8 +42,23 @@ fun simulationAvailability(action: SimulationAction, state: UiState): CommandAva
     return when (action) {
         SimulationAction.DISCONNECT ->
             if (disconnected) CommandAvailability.disabled("Ya está desconectado.") else CommandAvailability.ENABLED
+        // Reconectar también normaliza una conexión degradada.
         SimulationAction.RECONNECT ->
-            if (disconnected) CommandAvailability.ENABLED else CommandAvailability.disabled("Hay conexión.")
+            if (disconnected || degraded) CommandAvailability.ENABLED else CommandAvailability.disabled("Hay conexión.")
+        SimulationAction.FAULT ->
+            if (t?.state == RobotState.FAULT) CommandAvailability.disabled("Ya hay una falla.")
+            else needsRound() ?: CommandAvailability.ENABLED
+        SimulationAction.DEGRADED_CONNECTION -> when {
+            disconnected -> CommandAvailability.disabled("Sin conexión con el robot.")
+            degraded -> CommandAvailability.disabled("La conexión ya está degradada.")
+            else -> CommandAvailability.ENABLED
+        }
+        SimulationAction.OBSTACLE -> needsRound()
+            ?: if (state.activeAlerts.any { it.event.type == EventType.OBSTACLE }) {
+                CommandAvailability.disabled("Ya hay un obstáculo sin reconocer.")
+            } else {
+                CommandAvailability.ENABLED
+            }
         SimulationAction.REJECT_NEXT_COMMAND, SimulationAction.LOW_BATTERY -> CommandAvailability.ENABLED
         SimulationAction.PERSON_DETECTED -> needsRound() ?: CommandAvailability.ENABLED
         SimulationAction.ZONE_NOT_VERIFIABLE -> needsRound()

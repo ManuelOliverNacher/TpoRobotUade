@@ -90,8 +90,14 @@ object CommandRules {
                 else -> CommandAvailability.ENABLED
             }
             CommandType.CANCEL_MISSION -> when (t.state) {
-                RobotState.ON_MISSION, RobotState.PAUSED -> CommandAvailability.ENABLED
+                RobotState.ON_MISSION, RobotState.PAUSED ->
+                    if (routeBlocked) {
+                        CommandAvailability.disabled("Ruta bloqueada por un obstáculo.")
+                    } else {
+                        CommandAvailability.ENABLED
+                    }
                 RobotState.RETURNING -> CommandAvailability.disabled("El robot ya está volviendo a la base.")
+                RobotState.FAULT -> CommandAvailability.disabled("El robot tiene una falla.")
                 else -> CommandAvailability.disabled("La ronda ya finalizó.")
             }
             CommandType.RETURN_TO_SAFE_POINT -> when {

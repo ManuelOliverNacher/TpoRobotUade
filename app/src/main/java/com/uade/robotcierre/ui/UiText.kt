@@ -63,6 +63,9 @@ fun SimulationAction.label() = when (this) {
     SimulationAction.LOW_BATTERY -> "Batería baja"
     SimulationAction.PERSON_DETECTED -> "Persona detectada"
     SimulationAction.ZONE_NOT_VERIFIABLE -> "Zona no verificable"
+    SimulationAction.FAULT -> "Forzar falla"
+    SimulationAction.DEGRADED_CONNECTION -> "Conexión degradada"
+    SimulationAction.OBSTACLE -> "Obstáculo en la ruta"
 }
 
 fun Severity.label() = when (this) {

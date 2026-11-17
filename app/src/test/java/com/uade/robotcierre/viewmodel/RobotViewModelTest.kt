@@ -481,6 +481,9 @@ class RobotViewModelTest {
         override fun forceLowBattery() { calls += "battery" }
         override fun forcePersonDetected() { calls += "person" }
         override fun forceZoneNotVerifiable() { calls += "zone" }
+        override fun forceFault() { calls += "fault" }
+        override fun forceDegraded() { calls += "degraded" }
+        override fun forceObstacle() { calls += "obstacle" }
     }
 
     @Test
@@ -490,7 +493,7 @@ class RobotViewModelTest {
         assertTrue(vm.uiState.value.simulationAvailable)
         SimulationAction.entries.forEach { vm.onEvent(RobotUiEvent.Simulate(it)) }
         assertEquals(
-            listOf("disconnect", "reconnect", "reject", "battery", "person", "zone"),
+            listOf("disconnect", "reconnect", "reject", "battery", "person", "zone", "fault", "degraded", "obstacle"),
             sim.calls
         )
     }
@@ -603,5 +606,43 @@ class RobotViewModelTest {
         runCurrent()
         assertEquals(RobotState.ON_MISSION, vm.uiState.value.telemetry!!.state)
         assertEquals(CommandStatus.CONFIRMED, vm.uiState.value.commands.first().status)
+    }
+
+    @Test
+    fun unObstaculoSinReconocerBloqueaVolverYCancelarConSuMotivo() = runTest {
+        val repo = FakeRobotRepository()
+        val vm = newVm(repo)
+        push(repo, testTelemetry(RobotState.ON_MISSION, zone = Zone.PERGOLA))
+        assertTrue(vm.avail(CommandType.RETURN_TO_SAFE_POINT).enabled)
+        assertTrue(vm.avail(CommandType.CANCEL_MISSION).enabled)
+
+        pushEvent(repo, testEvent(id = "E-010", type = EventType.OBSTACLE, severity = Severity.WARNING, zone = Zone.PERGOLA))
+        assertEquals("Ruta bloqueada por un obstáculo.", vm.avail(CommandType.RETURN_TO_SAFE_POINT).reason)
+        assertFalse(vm.avail(CommandType.RETURN_TO_SAFE_POINT).enabled)
+        assertEquals("Ruta bloqueada por un obstáculo.", vm.avail(CommandType.CANCEL_MISSION).reason)
+        assertFalse(vm.avail(CommandType.CANCEL_MISSION).enabled)
+    }
+
+    @Test
+    fun conFallaNoSePuedeIniciarVolverNiCancelarPeroLaDetencionSigueHabilitada() = runTest {
+        val repo = FakeRobotRepository()
+        val vm = newVm(repo)
+        push(repo, testTelemetry(RobotState.FAULT, zone = Zone.LAWN))
+        listOf(CommandType.START_MISSION, CommandType.RETURN_TO_SAFE_POINT, CommandType.CANCEL_MISSION).forEach {
+            assertEquals("El robot tiene una falla.", vm.avail(it).reason)
+        }
+        assertTrue(vm.avail(CommandType.OPERATIONAL_STOP).enabled)
+    }
+
+    @Test
+    fun conConexionDegradadaNoSePuedeIniciarUnaRonda() = runTest {
+        val repo = FakeRobotRepository()
+        val vm = newVm(repo)
+        push(repo, testTelemetry(connection = ConnectionState.DEGRADED))
+        assertEquals(ConnectionState.DEGRADED, vm.uiState.value.connectionEffective)
+        assertEquals(
+            "Conexión degradada: no se puede iniciar una ronda.",
+            vm.avail(CommandType.START_MISSION).reason
+        )
     }
 }

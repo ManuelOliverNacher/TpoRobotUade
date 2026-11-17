@@ -143,4 +143,19 @@ class HistoryDaoTest {
             context.deleteDatabase(name)
         }
     }
+
+    @Test
+    fun conLaBaseVaciaElUltimoNumeroDeRondaEsCero() = runBlocking {
+        assertEquals(0, repo.lastMissionNumber())
+    }
+
+    @Test
+    fun conHistorialElUltimoNumeroEsElMayorGuardadoAunqueSeRepitan() = runBlocking {
+        repo.openMission("M-001", startedAt = 1_000)
+        repo.openMission("M-002", startedAt = 2_000)
+        repo.openMission("M-001", startedAt = 3_000) // instalaciones viejas repetían códigos
+        assertEquals(2, repo.lastMissionNumber())
+        repo.openMission("M-010", startedAt = 4_000)
+        assertEquals(10, repo.lastMissionNumber())
+    }
 }

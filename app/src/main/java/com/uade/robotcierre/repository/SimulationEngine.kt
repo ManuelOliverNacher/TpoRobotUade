@@ -7,6 +7,7 @@ import com.uade.robotcierre.model.CommandType
 import com.uade.robotcierre.model.ConnectionState
 import com.uade.robotcierre.model.EventType
 import com.uade.robotcierre.model.LocalizationQuality
+import com.uade.robotcierre.model.MissionCode
 import com.uade.robotcierre.model.RobotEvent
 import com.uade.robotcierre.model.RobotState
 import com.uade.robotcierre.model.Severity
@@ -31,7 +32,9 @@ import kotlin.math.min
 class SimulationEngine(
     private val config: SimulationConfig = SimulationConfig(),
     private val clock: () -> Long = System::currentTimeMillis,
-    private val onEvent: (RobotEvent) -> Unit = {}
+    private val onEvent: (RobotEvent) -> Unit = {},
+    /** Último número de ronda ya usado (guardado en el historial): la primera ronda será el siguiente. */
+    lastMissionNumber: Int = 0
 ) : SimulationControls {
 
     private enum class Phase { TRAVEL, VERIFY }
@@ -40,7 +43,7 @@ class SimulationEngine(
     private var state = RobotState.IDLE
     private var battery = config.initialBatteryPercent
     private var sequence = 0L
-    private var missionCounter = 0
+    private var missionCounter = lastMissionNumber
     private var eventCounter = 0
 
     private var missionActive = false
@@ -53,6 +56,7 @@ class SimulationEngine(
     private var returnElapsed = 0
 
     private var routeBlocked = false
+    private var degraded = false
     private var rejectNext = false
     private var lowBatteryWarned = false
     private var peopleDetected = 0
@@ -213,15 +217,20 @@ class SimulationEngine(
                 }
             }
             CommandType.CANCEL_MISSION -> when (state) {
-                RobotState.ON_MISSION, RobotState.PAUSED -> {
-                    startReturn()
-                    confirm(command, "Cancelada: el robot vuelve a la base.")
-                }
+                RobotState.ON_MISSION, RobotState.PAUSED ->
+                    if (routeBlocked) {
+                        reject(command, "Ruta bloqueada por un obstáculo.")
+                    } else {
+                        startReturn()
+                        confirm(command, "Cancelada: el robot vuelve a la base.")
+                    }
+                RobotState.FAULT -> reject(command, "El robot tiene una falla.")
                 else -> reject(command, "La ronda ya finalizó (no hay ronda en curso ni pausada).")
             }
             CommandType.RETURN_TO_SAFE_POINT -> when {
                 state == RobotState.IDLE -> reject(command, "El robot ya está en la base.")
                 state == RobotState.RETURNING -> reject(command, "El robot ya está volviendo.")
+                state == RobotState.FAULT -> reject(command, "El robot tiene una falla.")
                 routeBlocked -> reject(command, "Ruta bloqueada por un obstáculo.")
                 else -> {
                     startReturn()
@@ -240,6 +249,7 @@ class SimulationEngine(
                 reject(command, "No hay alertas activas (ya estaban cerradas).")
             } else {
                 activeAlerts.clear()
+                routeBlocked = false // reconocer el obstáculo libera la ruta
                 confirm(command)
             }
             CommandType.MANUAL_REVIEW -> handleManualReview(command)
@@ -264,7 +274,7 @@ class SimulationEngine(
         if (hasCriticalAlert()) return reject(command, "Hay una alerta crítica sin reconocer.")
 
         missionCounter++
-        missionId = "M-%03d".format(missionCounter)
+        missionId = MissionCode.format(missionCounter)
         missionActive = true
         returning = false
         routeCompleted = false
@@ -273,6 +283,7 @@ class SimulationEngine(
         phaseElapsed = 0
         returnElapsed = 0
         lowBatteryWarned = false
+        routeBlocked = false
         peopleDetected = 0
         localization = LocalizationQuality.GOOD
         degradedZone = null
@@ -308,6 +319,7 @@ class SimulationEngine(
     override fun forceDisconnect() {
         if (!connected) return
         connected = false
+        degraded = false
         val stopped = state == RobotState.ON_MISSION
         if (stopped) state = RobotState.PAUSED // el robot se detiene solo al perder las órdenes
         raise(
@@ -319,7 +331,10 @@ class SimulationEngine(
 
     @Synchronized
     override fun forceReconnect() {
-        if (connected) return
+        if (connected) {
+            degraded = false // con enlace degradado, reconectar lo normaliza
+            return
+        }
         connected = true
         activeAlerts.removeAll { it.type == EventType.CONNECTION_LOST }
     }
@@ -359,6 +374,31 @@ class SimulationEngine(
             EventType.ZONE_NOT_VERIFIABLE, Severity.WARNING, zone,
             "Localización degradada (lluvia simulada): ${zone.label} no se puede verificar. " +
                 "Requiere revisión manual."
+        )
+    }
+
+    @Synchronized
+    override fun forceFault() {
+        if (!connected || state != RobotState.ON_MISSION) return
+        // Sin evento propio: el contrato no tiene un tipo de falla, se ve por el estado (FAULT).
+        // Se sale con OPERATIONAL_STOP (→ STOPPED) y luego RETURN_TO_SAFE_POINT.
+        state = RobotState.FAULT
+    }
+
+    @Synchronized
+    override fun forceDegraded() {
+        if (!connected) return
+        degraded = true
+    }
+
+    @Synchronized
+    override fun forceObstacle() {
+        if (!connected || state != RobotState.ON_MISSION || routeBlocked) return
+        val zone = currentZone
+        routeBlocked = true
+        raise(
+            EventType.OBSTACLE, Severity.WARNING, zone,
+            "Obstáculo en ${zone.label}: la ruta de regreso a la base quedó bloqueada."
         )
     }
 
@@ -420,7 +460,7 @@ class SimulationEngine(
             robotId = config.robotId,
             timestamp = clock(),
             sequence = sequence,
-            connection = ConnectionState.CONNECTED,
+            connection = if (degraded) ConnectionState.DEGRADED else ConnectionState.CONNECTED,
             batteryPercent = batteryPercent(),
             estimatedMinutes = minutes,
             state = state,

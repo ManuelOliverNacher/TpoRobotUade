@@ -27,12 +27,16 @@ import kotlinx.coroutines.withTimeoutOrNull
 class SimulatedRobotRepository(
     scope: CoroutineScope,
     private val config: SimulationConfig = SimulationConfig(),
-    clock: () -> Long = System::currentTimeMillis
+    clock: () -> Long = System::currentTimeMillis,
+    /** Último número de ronda guardado en el historial (lo lee quien arma el simulador; este no accede a Room). */
+    lastMissionNumber: Int = 0
 ) : RobotRepository, SimulationControls {
 
     private val _telemetry = MutableSharedFlow<Telemetry>(replay = 1)
     private val _events = MutableSharedFlow<RobotEvent>(extraBufferCapacity = 64)
-    private val engine = SimulationEngine(config, clock) { _events.tryEmit(it) }
+    private val engine = SimulationEngine(
+        config, clock, onEvent = { _events.tryEmit(it) }, lastMissionNumber = lastMissionNumber
+    )
     private val commandCount = AtomicInteger(0)
 
     override val telemetry: Flow<Telemetry> = _telemetry.asSharedFlow()
@@ -69,4 +73,7 @@ class SimulatedRobotRepository(
     override fun forceLowBattery() = engine.forceLowBattery()
     override fun forcePersonDetected() = engine.forcePersonDetected()
     override fun forceZoneNotVerifiable() = engine.forceZoneNotVerifiable()
+    override fun forceFault() = engine.forceFault()
+    override fun forceDegraded() = engine.forceDegraded()
+    override fun forceObstacle() = engine.forceObstacle()
 }

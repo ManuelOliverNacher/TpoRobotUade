@@ -1,6 +1,8 @@
 package com.uade.robotcierre
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -15,6 +17,7 @@ import com.uade.robotcierre.viewmodel.RobotUiEvent
 import com.uade.robotcierre.viewmodel.SimulationAction
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -63,7 +66,8 @@ class SimulationFlowTest {
     private fun simulate(label: String) {
         rule.onNodeWithContentDescription("Simulación").performClick()
         rule.waitForText("Solo para la demostración.")
-        rule.onNode(hasText(label) and hasClickAction()).performClick()
+        // Con 9 botones la hoja se desplaza (a 360 dp los últimos quedan fuera de pantalla).
+        rule.onNode(hasText(label) and hasClickAction()).performScrollTo().performClick()
         rule.waitUntil(10_000) { count("Solo para la demostración.") == 0 }
     }
 
@@ -183,5 +187,57 @@ class SimulationFlowTest {
         rule.onNodeWithText("Registrar revisión manual").performClick()
         rule.waitForText("Zonas libres: 6 de 6.", timeoutMillis = 20_000)
         assertEquals(0, count("Registrar revisión manual"))
+    }
+
+    @Test
+    fun unaFallaDejaAlRobotEnFallaYSeSaleConDetencionYVueltaALaBase() {
+        startRound()
+        simulate("Forzar falla")
+        rule.waitForText("Falla")
+        // Con falla no se puede iniciar, volver ni cancelar; la detención sigue disponible.
+        rule.onNode(hasText("Volver a la base") and hasClickAction()).performScrollTo().assertIsNotEnabled()
+        assertTrue(count("El robot tiene una falla.") >= 2)
+        rule.onNodeWithText("Detención operativa").assertIsEnabled()
+
+        rule.onNodeWithText("Detención operativa").performClick()
+        rule.onNodeWithText("Confirmar").performClick()
+        // "Detenido" ya figura en Movimiento durante la falla: se espera a que la orden se confirme
+        // y "Volver a la base" quede habilitado (STOPPED sí permite volver).
+        val back = hasText("Volver a la base") and hasClickAction()
+        rule.waitUntil(15_000) { runCatching { rule.onNode(back).assertIsEnabled() }.isSuccess }
+        rule.onNode(back).performScrollTo().performClick()
+        rule.waitForText("Reposo", timeoutMillis = 30_000)
+    }
+
+    @Test
+    fun unObstaculoBloqueaVolverYCancelarHastaReconocerLaAlerta() {
+        startRound()
+        simulate("Obstáculo en la ruta")
+        waitForSubstring("Obstáculo en")
+        rule.onNode(hasText("Volver a la base") and hasClickAction()).performScrollTo().assertIsNotEnabled()
+        rule.onNode(hasText("Cancelar ronda") and hasClickAction()).performScrollTo().assertIsNotEnabled()
+        assertTrue(count("Ruta bloqueada por un obstáculo.") >= 2)
+
+        // Reconocer la alerta libera la ruta.
+        rule.tab("Alertas").performClick()
+        rule.onNodeWithText("Reconocer alertas").performClick()
+        rule.tab("Panel").performClick()
+        rule.waitUntil(10_000) {
+            count("Ruta bloqueada por un obstáculo.") == 0
+        }
+        rule.onNode(hasText("Volver a la base") and hasClickAction()).performScrollTo().assertIsEnabled()
+    }
+
+    @Test
+    fun laConexionDegradadaSeVeEnElChipYNoDejaIniciarHastaReconectar() {
+        supervise()
+        simulate("Conexión degradada")
+        rule.waitForText("Degradada")
+        rule.onNode(hasText("Iniciar ronda") and hasClickAction()).performScrollTo().assertIsNotEnabled()
+        rule.onNodeWithText("Conexión degradada: no se puede iniciar una ronda.").assertExists()
+
+        simulate("Reconectar")
+        rule.waitForText("Conectado")
+        rule.onNode(hasText("Iniciar ronda") and hasClickAction()).performScrollTo().assertIsEnabled()
     }
 }

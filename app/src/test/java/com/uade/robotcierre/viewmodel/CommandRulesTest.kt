@@ -192,4 +192,19 @@ class CommandRulesTest {
             confirm.toSet()
         )
     }
+
+    @Test
+    fun conObstaculoCancelarSeDeshabilitaConElMismoMotivoQueVolver() {
+        val obstacle = testEvent(type = EventType.OBSTACLE, severity = Severity.WARNING)
+        listOf(RobotState.ON_MISSION, RobotState.PAUSED).forEach {
+            assertDisabled(CommandType.CANCEL_MISSION, input(state = it, alerts = listOf(obstacle)), "Ruta bloqueada por un obstáculo.")
+        }
+        // Sin obstáculo sigue habilitado.
+        assertTrue(enabled(CommandType.CANCEL_MISSION, input(state = RobotState.ON_MISSION)))
+    }
+
+    @Test
+    fun conFallaCancelarDiceQueHayUnaFalla() {
+        assertDisabled(CommandType.CANCEL_MISSION, input(state = RobotState.FAULT), "El robot tiene una falla.")
+    }
 }

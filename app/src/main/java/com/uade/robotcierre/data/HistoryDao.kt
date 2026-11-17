@@ -26,6 +26,9 @@ interface HistoryDao {
     @Query("UPDATE missions SET endedAt = :now, result = :interrupted WHERE result = :inProgress")
     suspend fun closeInterrupted(now: Long, interrupted: MissionResult, inProgress: MissionResult)
 
+    @Query("SELECT code FROM missions")
+    suspend fun allMissionCodes(): List<String>
+
     @Query("SELECT * FROM missions ORDER BY startedAt DESC, id DESC")
     fun observeMissions(): Flow<List<MissionEntity>>
 

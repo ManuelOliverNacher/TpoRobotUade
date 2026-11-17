@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 /**
@@ -42,7 +43,11 @@ class AppContainer(context: Context, val demoMode: Boolean = true) {
     fun createRobotViewModelFactory(): ViewModelProvider.Factory = viewModelFactory {
         initializer {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-            val simulated = SimulatedRobotRepository(scope, simulationConfig)
+            // Los códigos de ronda continúan desde el último guardado en Room. Es una consulta mínima y
+            // única, al crear el ViewModel (no se repite): bloquear acá es aceptable y evita sumar un
+            // método asíncrono al contrato RobotRepository. El simulador no accede a Room.
+            val lastMissionNumber = runBlocking(Dispatchers.IO) { historyRepository.lastMissionNumber() }
+            val simulated = SimulatedRobotRepository(scope, simulationConfig, lastMissionNumber = lastMissionNumber)
             RobotViewModel(
                 repository = simulated,
                 simulation = if (demoMode) simulated else null,

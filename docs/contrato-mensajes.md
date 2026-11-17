@@ -256,12 +256,15 @@ Persona detectada en el patio:
 |---|---|
 | `Telemetry.zonesStatus` | **Agregado.** Hace falta para mostrar "X de 6 con su estado". |
 | `Command.zone` | **Agregado.** `MANUAL_REVIEW` necesita saber qué zona se revisa. |
-| `MissionEntity.code` | **Agregado.** Guarda el código que mostró el robot (`M-001`); el `id` de Room es un número autogenerado, porque el simulador reinicia los códigos en cada arranque. |
+| `MissionEntity.code` | **Agregado.** Guarda el código que mostró el robot (`M-001`); el `id` de Room es un número autogenerado. Los códigos continúan entre arranques: al crear el simulador, la app le pasa el mayor número guardado en Room (el simulador no accede a Room). Las rondas guardadas por versiones anteriores pueden tener códigos repetidos. |
 | `Telemetry.checkpoint` | Va de **0 a 6** (0 = sin ronda); el CLAUDE.md decía 1..6. |
 | `Telemetry.zone`, `missionId` | Pueden ser `null` (en la base o sin ronda). |
 | `Telemetry.activeAlerts` | Es un **entero** (cantidad); el detalle viaja en los eventos. |
 | Entidades de Room | En el código están en inglés: `inicio`→`startedAt`, `fin`→`endedAt`, `resultado`→`result`, `tipo`→`type`, `severidad`→`severity`, `zona`→`zone`, `detalle`→`details`, `reconocida`→`acknowledged`. |
 
-Valores que **existen pero el simulador nunca produce**: `ConnectionState.DEGRADED`, `RobotState.FAULT` y
-`EventType.OBSTACLE`. La app los sabe mostrar y la regla de "ruta bloqueada" está testeada, pero no hay forma de
-provocarlos desde el panel de simulación.
+Valores que el simulador produce **solo desde el panel de simulación**: `ConnectionState.DEGRADED` (botón
+*Conexión degradada*, la telemetría sigue llegando), `RobotState.FAULT` (botón *Forzar falla*) y `EventType.OBSTACLE`
+(botón *Obstáculo en la ruta*, que bloquea `RETURN_TO_SAFE_POINT` y `CANCEL_MISSION` con el motivo
+"Ruta bloqueada por un obstáculo." hasta que se reconoce la alerta). La falla **no genera evento**: el contrato no
+tiene un tipo de evento para fallas, se ve solo por `state = FAULT`. Ninguno de estos cambios modifica el esquema de los
+mensajes.

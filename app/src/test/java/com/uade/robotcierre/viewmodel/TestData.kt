@@ -101,6 +101,9 @@ class FakeHistoryRepository : HistoryRepository {
     }
 
     override val missions = missionsState
+
+    override suspend fun lastMissionNumber(): Int =
+        com.uade.robotcierre.model.MissionCode.lastNumber(missionsState.value.map { it.code })
     override val eventsOutsideMissions =
         eventsState.map { l -> l.filter { it.missionId == null }.sortedByDescending { it.id } }
 

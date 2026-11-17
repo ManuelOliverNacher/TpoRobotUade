@@ -17,6 +17,9 @@ interface HistoryRepository {
     /** Eventos de una ronda, en orden cronológico. */
     fun eventsOf(missionId: Long): Flow<List<EventRecord>>
 
+    /** Mayor número de código (`M-007` → 7) entre las rondas guardadas; 0 si no hay ninguna. */
+    suspend fun lastMissionNumber(): Int
+
     /** Abre una ronda en curso y devuelve su id. */
     suspend fun openMission(code: String, startedAt: Long): Long
 

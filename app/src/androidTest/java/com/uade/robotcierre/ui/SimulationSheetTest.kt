@@ -5,7 +5,9 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.uade.robotcierre.model.RobotState
 import com.uade.robotcierre.model.Zone
@@ -14,6 +16,7 @@ import com.uade.robotcierre.ui.theme.RobotCierreUadeTheme
 import com.uade.robotcierre.viewmodel.SimulationAction
 import com.uade.robotcierre.viewmodel.UiState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,13 +39,14 @@ class SimulationSheetTest {
     }
 
     @Test
-    fun muestraElAvisoDeDemoYLosSeisBotonesEnOrden() {
+    fun muestraElAvisoDeDemoYLosNueveBotonesEnOrden() {
         show(uiStateOf(telemetryOf()))
         rule.onNodeWithText("Panel de simulación").assertIsDisplayed()
         rule.onNodeWithText("Solo para la demostración.").assertIsDisplayed()
         listOf(
             "Forzar desconexión", "Reconectar", "Rechazar próxima orden",
-            "Batería baja", "Persona detectada", "Zona no verificable"
+            "Batería baja", "Persona detectada", "Zona no verificable",
+            "Forzar falla", "Conexión degradada", "Obstáculo en la ruta"
         ).forEach { rule.onNodeWithText(it).assertExists() }
     }
 
@@ -73,5 +77,24 @@ class SimulationSheetTest {
         assertEquals(listOf(SimulationAction.RECONNECT), actions)
         rule.onNodeWithText("Forzar desconexión").assertIsNotEnabled()
         rule.onNodeWithText("Ya está desconectado.").assertExists()
+    }
+
+    @Test
+    fun enReposoFallaYObstaculoQuedanDeshabilitadosConSuMotivoYLaDegradadaNo() {
+        show(uiStateOf(telemetryOf()))
+        rule.onNodeWithText("Forzar falla").performScrollTo().assertIsNotEnabled()
+        rule.onNodeWithText("Obstáculo en la ruta").performScrollTo().assertIsNotEnabled()
+        // El motivo se repite (Persona, Zona, Falla y Obstáculo): hay al menos cuatro.
+        assertTrue(rule.onAllNodesWithText("Requiere una ronda en curso.").fetchSemanticsNodes().size >= 4)
+        rule.onNodeWithText("Conexión degradada").performScrollTo().assertIsEnabled()
+    }
+
+    @Test
+    fun enRondaSePuedenForzarFallaYObstaculoYLaHojaSeCierra() {
+        show(uiStateOf(telemetryOf(RobotState.ON_MISSION, Zone.PERGOLA)))
+        rule.onNodeWithText("Forzar falla").performScrollTo().assertIsEnabled().performClick()
+        rule.onNodeWithText("Obstáculo en la ruta").performScrollTo().assertIsEnabled().performClick()
+        assertEquals(listOf(SimulationAction.FAULT, SimulationAction.OBSTACLE), actions)
+        assertEquals(2, dismissed)
     }
 }

@@ -13,4 +13,13 @@ interface SimulationControls {
     fun forceLowBattery()
     fun forcePersonDetected()
     fun forceZoneNotVerifiable()
+
+    /** Estado FAULT (solo con ronda en curso). No genera evento: se ve por el estado. */
+    fun forceFault()
+
+    /** Conexión DEGRADED: la telemetría sigue llegando. Se normaliza con [forceReconnect]. */
+    fun forceDegraded()
+
+    /** Evento OBSTACLE: bloquea la ruta (rechaza Volver a la base y Cancelar) hasta reconocer la alerta. */
+    fun forceObstacle()
 }

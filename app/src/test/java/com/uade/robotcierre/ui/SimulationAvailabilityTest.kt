@@ -81,9 +81,66 @@ class SimulationAvailabilityTest {
         assertEquals(
             listOf(
                 "Forzar desconexión", "Reconectar", "Rechazar próxima orden",
-                "Batería baja", "Persona detectada", "Zona no verificable"
+                "Batería baja", "Persona detectada", "Zona no verificable",
+                "Forzar falla", "Conexión degradada", "Obstáculo en la ruta"
             ),
             SimulationAction.entries.map { it.label() }
+        )
+    }
+
+    @Test
+    fun fallaYObstaculoRequierenUnaRondaEnCurso() {
+        val idle = state(testTelemetry())
+        listOf(SimulationAction.FAULT, SimulationAction.OBSTACLE).forEach {
+            assertFalse(enabled(it, idle))
+            assertEquals("Requiere una ronda en curso.", simulationAvailability(it, idle).reason)
+        }
+        val running = state(testTelemetry(RobotState.ON_MISSION, zone = Zone.LAWN))
+        assertTrue(enabled(SimulationAction.FAULT, running))
+        assertTrue(enabled(SimulationAction.OBSTACLE, running))
+    }
+
+    @Test
+    fun conFallaNoSePuedeForzarOtraFalla() {
+        val s = state(testTelemetry(RobotState.FAULT, zone = Zone.LAWN))
+        assertEquals("Ya hay una falla.", simulationAvailability(SimulationAction.FAULT, s).reason)
+    }
+
+    @Test
+    fun conUnObstaculoSinReconocerNoSePuedeForzarOtro() {
+        val alert = com.uade.robotcierre.viewmodel.AlertUi(
+            com.uade.robotcierre.viewmodel.testEvent(
+                type = com.uade.robotcierre.model.EventType.OBSTACLE,
+                severity = com.uade.robotcierre.model.Severity.WARNING
+            ),
+            receivedAt = 0L,
+            closed = false
+        )
+        val s = UiState(
+            telemetry = testTelemetry(RobotState.ON_MISSION, zone = Zone.LAWN),
+            connectionEffective = ConnectionState.CONNECTED,
+            alerts = listOf(alert)
+        )
+        assertEquals("Ya hay un obstáculo sin reconocer.", simulationAvailability(SimulationAction.OBSTACLE, s).reason)
+    }
+
+    @Test
+    fun laConexionDegradadaSeForzaConConexionYSeSaleConReconectar() {
+        val ok = state(testTelemetry())
+        assertTrue(enabled(SimulationAction.DEGRADED_CONNECTION, ok))
+        assertFalse(enabled(SimulationAction.RECONNECT, ok))
+
+        val degraded = state(testTelemetry(connection = ConnectionState.DEGRADED), ConnectionState.DEGRADED)
+        assertEquals(
+            "La conexión ya está degradada.",
+            simulationAvailability(SimulationAction.DEGRADED_CONNECTION, degraded).reason
+        )
+        assertTrue(enabled(SimulationAction.RECONNECT, degraded))
+
+        val lost = state(testTelemetry(), ConnectionState.DISCONNECTED)
+        assertEquals(
+            "Sin conexión con el robot.",
+            simulationAvailability(SimulationAction.DEGRADED_CONNECTION, lost).reason
         )
     }
 }

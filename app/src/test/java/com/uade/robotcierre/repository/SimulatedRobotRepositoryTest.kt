@@ -114,4 +114,20 @@ class SimulatedRobotRepositoryTest {
         advanceTimeBy(5_000)
         assertEquals(1, events.count { it.type == EventType.LOW_BATTERY })
     }
+
+    @Test
+    fun lasRondasContinuanDesdeElUltimoNumeroGuardado() = runTest {
+        val repo = SimulatedRobotRepository(backgroundScope, clock = { currentTime }, lastMissionNumber = 7)
+        repo.sendCommand(cmd("C1", CommandType.START_MISSION))
+        advanceTimeBy(1_500)
+        assertEquals("M-008", repo.telemetry.first().missionId)
+    }
+
+    @Test
+    fun conLaBaseVaciaLaPrimeraRondaEsM001() = runTest {
+        val repo = repo()
+        repo.sendCommand(cmd("C1", CommandType.START_MISSION))
+        advanceTimeBy(1_500)
+        assertEquals("M-001", repo.telemetry.first().missionId)
+    }
 }

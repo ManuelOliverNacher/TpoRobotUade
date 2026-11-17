@@ -85,7 +85,6 @@ class SimulacionCapturasTest {
 
         // La hoja en reposo: lo que no tendría efecto queda deshabilitado con su motivo.
         openSheet()
-        shot("simulacion_1_hoja_en_reposo")
         Espresso.pressBack()
         rule.waitUntil(10_000) {
             rule.onAllNodesWithText("Solo para la demostración.").fetchSemanticsNodes().isEmpty()
@@ -104,7 +103,6 @@ class SimulacionCapturasTest {
         rule.onNode(hasText("Iniciar ronda") and hasClickAction()).performScrollTo().performClick()
         rule.waitForText("En ronda")
         openSheet()
-        shot("simulacion_2_hoja_en_ronda")
         closeSheetWith("Forzar desconexión")
 
         // Banner rojo fijo + datos antiguos.
@@ -191,5 +189,65 @@ class SimulacionCapturasTest {
         rule.waitForText("RESUMEN DE CIERRE", timeoutMillis = 40_000)
         scrollToTop()
         shot("escenario5_rondas_resumen_con_revision_pendiente")
+    }
+
+    /** La hoja de simulación con los 9 botones: arriba y desplazada hasta el final (a 360 dp hace falta scroll). */
+    @Test
+    fun capturasDeLaHojaDeSimulacion() {
+        rule.onNodeWithText("Supervisar").performClick()
+        rule.waitForText("Reposo")
+        openSheet()
+        shot("simulacion_1_hoja_en_reposo")
+        rule.onNodeWithText("Obstáculo en la ruta").performScrollTo()
+        shot("simulacion_5_hoja_en_reposo_abajo")
+        Espresso.pressBack()
+        rule.waitUntil(10_000) {
+            rule.onAllNodesWithText("Solo para la demostración.").fetchSemanticsNodes().isEmpty()
+        }
+
+        rule.onNodeWithText("Iniciar ronda").performScrollTo().performClick()
+        rule.waitForText("En ronda")
+        openSheet()
+        shot("simulacion_2_hoja_en_ronda")
+        rule.onNodeWithText("Obstáculo en la ruta").performScrollTo()
+        shot("simulacion_6_hoja_en_ronda_abajo")
+    }
+
+    @Test
+    fun capturasDeFallaObstaculoYConexionDegradada() {
+        val vm = { scenario.viewModel() }
+        rule.onNodeWithText("Supervisar").performClick()
+        rule.waitForText("Reposo")
+
+        // Conexión degradada: chip "Degradada" y "Iniciar ronda" deshabilitado con su motivo.
+        openSheet()
+        closeSheetWith("Conexión degradada")
+        rule.waitForText("Degradada")
+        rule.onNodeWithText("Conexión degradada: no se puede iniciar una ronda.").performScrollTo()
+        shot("nuevas_1_conexion_degradada_panel")
+        openSheet()
+        closeSheetWith("Reconectar")
+        rule.waitForText("Conectado")
+
+        // Obstáculo: alerta y "Volver a la base" / "Cancelar ronda" bloqueados.
+        rule.onNodeWithText("Iniciar ronda").performScrollTo().performClick()
+        rule.waitForText("Punto 2 de 6 · Pasillo de servicios", timeoutMillis = 30_000)
+        rule.runOnUiThread { vm().onEvent(RobotUiEvent.Simulate(SimulationAction.OBSTACLE)) }
+        rule.waitUntil(10_000) {
+            rule.onAllNodesWithText("Ruta bloqueada por un obstáculo.").fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNode(hasText("Volver a la base") and hasClickAction()).performScrollTo()
+        shot("nuevas_2_obstaculo_panel_ruta_bloqueada")
+        rule.tab("Alertas").performClick()
+        rule.waitForText("Obstáculo")
+        shot("nuevas_3_obstaculo_alertas")
+        rule.onNodeWithText("Reconocer alertas").performClick()
+
+        // Falla: estado "Falla" y salida con detención operativa.
+        rule.tab("Panel").performClick()
+        rule.runOnUiThread { vm().onEvent(RobotUiEvent.Simulate(SimulationAction.FAULT)) }
+        rule.waitForText("Falla")
+        scrollToTop()
+        shot("nuevas_4_falla_panel")
     }
 }

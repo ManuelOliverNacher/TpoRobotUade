@@ -4,6 +4,7 @@ import com.uade.robotcierre.model.Command
 import com.uade.robotcierre.model.CommandResponse
 import com.uade.robotcierre.model.CommandStatus
 import com.uade.robotcierre.model.CommandType
+import com.uade.robotcierre.model.ConnectionState
 import com.uade.robotcierre.model.EventType
 import com.uade.robotcierre.model.LocalizationQuality
 import com.uade.robotcierre.model.RobotEvent
@@ -370,5 +371,163 @@ class SimulationEngineTest {
         val b = script()
         assertNotNull(a.firstOrNull())
         assertEquals(a, b)
+    }
+
+    // ------------------------------------------------- códigos de ronda continuos
+
+    @Test
+    fun conLaBaseVaciaLaPrimeraRondaEsM001YLaSiguienteM002() {
+        val sim = Sim()
+        sim.send(CommandType.START_MISSION)
+        assertEquals("M-001", sim.tick()!!.missionId)
+        sim.send(CommandType.CANCEL_MISSION)
+        sim.runUntilIdle()
+        sim.send(CommandType.START_MISSION)
+        assertEquals("M-002", sim.tick()!!.missionId)
+    }
+
+    @Test
+    fun conHistorialLaNumeracionContinuaDesdeElUltimoCodigoGuardado() {
+        val events = mutableListOf<RobotEvent>()
+        val engine = SimulationEngine(SimulationConfig(), { 0L }, { events += it }, lastMissionNumber = 7)
+        engine.handle(Command("C-1", CommandType.START_MISSION, 0, "op-1", 10))
+        assertEquals("M-008", engine.tick()!!.missionId)
+    }
+
+    // ------------------------------------------------------- falla / degradada / obstáculo
+
+    @Test
+    fun forzarFallaConRondaPoneElEstadoFaultSinAlertaNiEvento() {
+        val sim = Sim()
+        sim.send(CommandType.START_MISSION)
+        sim.tick(5)
+        sim.engine.forceFault()
+        val t = sim.tick()!!
+        assertEquals(RobotState.FAULT, t.state)
+        assertFalse(t.moving)
+        assertEquals(0, t.activeAlerts)
+        assertTrue(sim.events.isEmpty())
+        // El robot no avanza mientras tiene la falla.
+        val zone = t.zone
+        sim.tick(30)
+        assertEquals(zone, sim.tick()!!.zone)
+    }
+
+    @Test
+    fun laFallaSeIgnoraSinRondaEnCursoOSinConexion() {
+        val sim = Sim()
+        sim.engine.forceFault()
+        assertEquals(RobotState.IDLE, sim.tick()!!.state)
+        sim.send(CommandType.START_MISSION)
+        sim.tick(3)
+        sim.engine.forceDisconnect()
+        sim.engine.forceFault()
+        sim.engine.forceReconnect()
+        assertEquals(RobotState.PAUSED, sim.tick()!!.state) // la pausa por pérdida de conexión, no FAULT
+    }
+
+    @Test
+    fun conFallaSeRechazanIniciarVolverYCancelarYSeSaleConDetencionYVuelta() {
+        val sim = Sim()
+        sim.send(CommandType.START_MISSION)
+        sim.tick(5)
+        sim.engine.forceFault()
+        sim.tick()
+        listOf(CommandType.START_MISSION, CommandType.RETURN_TO_SAFE_POINT, CommandType.CANCEL_MISSION).forEach {
+            val r = sim.send(it)
+            assertEquals(CommandStatus.REJECTED, r.status)
+            assertEquals("El robot tiene una falla.", r.reason)
+        }
+        assertEquals(CommandStatus.CONFIRMED, sim.send(CommandType.OPERATIONAL_STOP).status)
+        assertEquals(RobotState.STOPPED, sim.tick()!!.state)
+        assertEquals(CommandStatus.CONFIRMED, sim.send(CommandType.RETURN_TO_SAFE_POINT).status)
+        sim.runUntilIdle()
+    }
+
+    @Test
+    fun laConexionDegradadaSigueEmitiendoTelemetriaYSeNormalizaAlReconectar() {
+        val sim = Sim()
+        assertEquals(ConnectionState.CONNECTED, sim.tick()!!.connection)
+        sim.engine.forceDegraded()
+        val t1 = sim.tick()!!
+        val t2 = sim.tick()!!
+        assertEquals(ConnectionState.DEGRADED, t1.connection)
+        assertEquals(t1.sequence + 1, t2.sequence) // sigue llegando
+        sim.engine.forceReconnect()
+        assertEquals(ConnectionState.CONNECTED, sim.tick()!!.connection)
+    }
+
+    @Test
+    fun conConexionDegradadaElSimuladorTodaviaResponderOrdenes() {
+        val sim = Sim()
+        sim.engine.forceDegraded()
+        assertTrue(sim.engine.isConnected)
+        assertEquals(CommandStatus.CONFIRMED, sim.send(CommandType.START_MISSION).status)
+    }
+
+    @Test
+    fun perderLaConexionLimpiaLaDegradacion() {
+        val sim = Sim()
+        sim.engine.forceDegraded()
+        sim.engine.forceDisconnect()
+        sim.engine.forceReconnect()
+        assertEquals(ConnectionState.CONNECTED, sim.tick()!!.connection)
+    }
+
+    @Test
+    fun laConexionDegradadaSeIgnoraSinConexion() {
+        val sim = Sim()
+        sim.engine.forceDisconnect()
+        sim.engine.forceDegraded()
+        sim.engine.forceReconnect()
+        assertEquals(ConnectionState.CONNECTED, sim.tick()!!.connection)
+    }
+
+    @Test
+    fun elObstaculoGeneraUnEventoYBloqueaVolverYCancelarHastaReconocerlo() {
+        val sim = Sim()
+        sim.send(CommandType.START_MISSION)
+        sim.tick(5)
+        sim.engine.forceObstacle()
+        val t = sim.tick()!!
+        assertEquals(RobotState.ON_MISSION, t.state) // no frena al robot
+        assertEquals(1, t.activeAlerts)
+        val obstacle = sim.events(EventType.OBSTACLE).single()
+        assertEquals(Severity.WARNING, obstacle.severity)
+        assertEquals(Zone.HALL, obstacle.zone)
+
+        listOf(CommandType.RETURN_TO_SAFE_POINT, CommandType.CANCEL_MISSION).forEach {
+            val r = sim.send(it)
+            assertEquals(CommandStatus.REJECTED, r.status)
+            assertEquals("Ruta bloqueada por un obstáculo.", r.reason)
+        }
+        assertEquals(CommandStatus.CONFIRMED, sim.send(CommandType.ACK_ALERT).status)
+        assertEquals(CommandStatus.CONFIRMED, sim.send(CommandType.RETURN_TO_SAFE_POINT).status)
+    }
+
+    @Test
+    fun elObstaculoSeIgnoraSinRondaYNoSeDuplica() {
+        val sim = Sim()
+        sim.engine.forceObstacle()
+        assertTrue(sim.events(EventType.OBSTACLE).isEmpty())
+        sim.send(CommandType.START_MISSION)
+        sim.tick(3)
+        sim.engine.forceObstacle()
+        sim.engine.forceObstacle()
+        assertEquals(1, sim.events(EventType.OBSTACLE).size)
+    }
+
+    @Test
+    fun unaRondaNuevaEmpiezaConLaRutaLibre() {
+        val sim = Sim()
+        sim.send(CommandType.START_MISSION)
+        sim.tick(3)
+        sim.engine.forceObstacle()
+        sim.send(CommandType.ACK_ALERT)
+        sim.send(CommandType.CANCEL_MISSION)
+        sim.runUntilIdle()
+        sim.send(CommandType.START_MISSION)
+        sim.tick(3)
+        assertEquals(CommandStatus.CONFIRMED, sim.send(CommandType.RETURN_TO_SAFE_POINT).status)
     }
 }

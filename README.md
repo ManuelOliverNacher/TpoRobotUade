@@ -86,8 +86,15 @@ Tiempos del simulador (valores propuestos por el grupo): cada zona dura **20 s**
 ### Extra: rechazo de una orden
 ⚙ → **Rechazar próxima orden**: aparece un aviso breve ("La próxima orden será rechazada.") y la hoja se cierra. Enviá cualquier orden (por ejemplo **Iniciar ronda**): queda **Rechazada** con su motivo. Solo afecta a la siguiente orden.
 
+### Extra: falla, conexión degradada y obstáculo
+Los tres últimos botones de la hoja (la hoja se desplaza: a 360 dp hay que bajar para verlos). Cada uno aparece deshabilitado con su motivo cuando no aplica.
+
+- **Forzar falla** (requiere una ronda en curso): el robot pasa a **Falla** y se detiene. Con falla no se puede iniciar, volver ni cancelar ("El robot tiene una falla."); se sale con **Detención operativa** (queda *Detenido*) y luego **Volver a la base**. La falla se ve **solo por el estado**: no genera alerta ni evento (el contrato no tiene un tipo de evento para fallas).
+- **Conexión degradada** (requiere conexión): el chip de la barra pasa a **Degradada** y la telemetría sigue llegando. No se puede iniciar una ronda. Se normaliza con **Reconectar**.
+- **Obstáculo en la ruta** (requiere una ronda en curso): aparece la alerta *Obstáculo* y la ruta de regreso queda bloqueada: **Volver a la base** y **Cancelar ronda** se deshabilitan ("Ruta bloqueada por un obstáculo."). **Reconocer alertas** libera la ruta. El robot no se detiene.
+
 ### Reiniciar la demo
-- Cerrar la app descarta el robot simulado: al volver a abrirla hay un robot nuevo, en reposo. Si había una ronda abierta, queda en el historial como *Interrumpida*.
+- Cerrar la app descarta el robot simulado: al volver a abrirla hay un robot nuevo, en reposo. Si había una ronda abierta, queda en el historial como *Interrumpida*. Los códigos de ronda **continúan** desde el último guardado en el historial (si la última fue `M-005`, la siguiente es `M-006`).
 - Para vaciar también el historial: `adb shell pm clear com.uade.robotcierre` (o *Ajustes → Apps → Borrar datos*).
 - Para publicar la app **sin** el panel de simulación: crear el contenedor con `AppContainer(this, demoMode = false)` en `RobotCierreApplication`.
 
@@ -130,7 +137,7 @@ SimulatedRobotRepository  →  SimulationEngine       RoomHistoryRepository  →
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-Estado actual: **100 tests unitarios y 71 instrumentados**, todos en verde (probados en un emulador Pixel 7 con Android 17). Los reportes HTML quedan en `app/build/reports/tests/testDebugUnitTest/index.html` y `app/build/reports/androidTests/connected/debug/index.html`.
+Estado actual: **130 tests unitarios y 83 instrumentados**, todos en verde (probados en un emulador Pixel 7 con Android 17). Los reportes HTML quedan en `app/build/reports/tests/testDebugUnitTest/index.html` y `app/build/reports/androidTests/connected/debug/index.html`.
 
 > **Cuidado:** los tests instrumentados **borran el historial** de la app instalada en el dispositivo de prueba y la **desinstalan** al terminar. Correrlos en un emulador, no en un celular con datos que quieras conservar.
 
@@ -153,7 +160,7 @@ Clases de capturas: `PanelCapturasTest`, `PantallasCapturasTest` y `SimulacionCa
 |---|---|
 | `app/` | Código fuente de la app, tests y el esquema de Room exportado (`app/schemas/`) |
 | `entrega/` | APK instalable |
-| `evidencias/` | Capturas del emulador: selección, panel, rondas, alertas, historial, simulación y los escenarios; incluye el Panel a 360 dp |
+| `evidencias/` | Capturas del emulador: selección, panel, rondas, alertas, historial, simulación (hoja con los 9 botones) y los escenarios, más falla, obstáculo y conexión degradada (`10_nuevas_*`); todas a 360 dp |
 | `docs/contrato-mensajes.md` | Contrato de mensajes (telemetría, comando, respuesta, evento) con ejemplos JSON **generados desde los modelos reales**; un test falla si el documento se desactualiza |
 | `ESPECIFICACION_PANTALLAS.md` | Especificación visual y de pantallas (base del Figma) |
 | `CLAUDE.md` | Reglas y alcance del proyecto |
@@ -162,8 +169,9 @@ Clases de capturas: `PanelCapturasTest`, `PantallasCapturasTest` y `SimulacionCa
 
 - Solo se probó en un **emulador** (Pixel 7, Android 17), a 411 dp y a 360 dp. No se probó en un celular físico ni en una tablet.
 - El tema es **solo claro** (la especificación define una única paleta) y la orientación está **fija en vertical**. Desde Android 16, en pantallas grandes (tablets) el sistema puede ignorar el bloqueo de orientación.
-- El simulador no genera nunca el estado *Falla*, ni la conexión *Degradada*, ni el evento *Obstáculo* (la regla de "ruta bloqueada" existe y está testeada, pero no se puede provocar desde el panel).
+- La *Falla* se ve **solo por el estado**: no genera alerta ni evento, así que no aparece en Alertas ni en el historial de eventos (el contrato no tiene un tipo de evento de falla).
+- El *Obstáculo* bloquea **Volver a la base** y **Cancelar ronda**, pero no frena al robot: si la ronda termina sola, el robot regresa a la base igual (el regreso automático al terminar las 6 zonas no consulta la ruta).
 - No hay botón de **avisar a seguridad**: es una decisión del operador fuera de la app.
 - **Reconocer alertas** cierra todas las abiertas a la vez; el contrato no permite elegir una.
-- Los códigos de ronda (`M-001`) los reinicia el simulador en cada arranque, así que el historial puede mostrar varias rondas con el mismo código; se distinguen por fecha.
+- Las rondas guardadas **antes** de esta mejora pueden tener códigos repetidos (`M-001` varias veces); se distinguen por fecha. Desde ahora la numeración continúa sin repetirse.
 - Solo hay APK de **depuración** (sin firma de publicación ni ofuscación).

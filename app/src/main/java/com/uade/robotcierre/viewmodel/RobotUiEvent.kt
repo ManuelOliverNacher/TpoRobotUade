@@ -10,7 +10,10 @@ enum class SimulationAction {
     REJECT_NEXT_COMMAND,
     LOW_BATTERY,
     PERSON_DETECTED,
-    ZONE_NOT_VERIFIABLE
+    ZONE_NOT_VERIFIABLE,
+    FAULT,
+    DEGRADED_CONNECTION,
+    OBSTACLE
 }
 
 /** Eventos que la UI envía al ViewModel. */

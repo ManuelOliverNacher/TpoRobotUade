@@ -257,6 +257,9 @@ class RobotViewModel(
             SimulationAction.LOW_BATTERY -> sim.forceLowBattery()
             SimulationAction.PERSON_DETECTED -> sim.forcePersonDetected()
             SimulationAction.ZONE_NOT_VERIFIABLE -> sim.forceZoneNotVerifiable()
+            SimulationAction.FAULT -> sim.forceFault()
+            SimulationAction.DEGRADED_CONNECTION -> sim.forceDegraded()
+            SimulationAction.OBSTACLE -> sim.forceObstacle()
         }
     }
 
