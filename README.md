@@ -15,7 +15,7 @@ App Android para **operar y supervisar un robot Unitree Go2 EDU simulado**. Trab
 
 Requisitos: un celular o emulador con **Android 11 o superior (API 30+)**.
 
-El APK de depuración (`BarridoCierreUADE-debug.apk`, 31,0 MB, firmado con la clave de depuración) no se versiona en el repositorio: se descarga desde los [Releases](https://github.com/ManuelOliverNacher/TpoRobotUade/releases).
+El APK de depuración (`BarridoCierreUADE-debug.apk`, 30,9 MB, firmado con la clave de depuración) no se versiona en el repositorio: se descarga desde los [Releases](https://github.com/ManuelOliverNacher/TpoRobotUade/releases).
 
 **Con `adb`** (celular con depuración USB, o emulador), desde la carpeta donde descargaste el APK:
 
