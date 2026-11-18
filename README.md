@@ -15,12 +15,12 @@ App Android para **operar y supervisar un robot Unitree Go2 EDU simulado**. Trab
 
 Requisitos: un celular o emulador con **Android 11 o superior (API 30+)**.
 
-El APK ya compilado está en [`entrega/BarridoCierreUADE-debug.apk`](entrega/BarridoCierreUADE-debug.apk) (30,9 MB, firmado con la clave de depuración).
+El APK de depuración (`BarridoCierreUADE-debug.apk`, 31,0 MB, firmado con la clave de depuración) no se versiona en el repositorio: se descarga desde los [Releases](https://github.com/ManuelOliverNacher/TpoRobotUade/releases).
 
-**Con `adb`** (celular con depuración USB, o emulador):
+**Con `adb`** (celular con depuración USB, o emulador), desde la carpeta donde descargaste el APK:
 
 ```bash
-adb install -r entrega/BarridoCierreUADE-debug.apk
+adb install -r BarridoCierreUADE-debug.apk
 ```
 
 **Sin `adb`:** copiá el APK al celular, abrilo desde el administrador de archivos y aceptá "instalar apps de orígenes desconocidos" para esa app.
@@ -159,19 +159,20 @@ Clases de capturas: `PanelCapturasTest`, `PantallasCapturasTest` y `SimulacionCa
 | Ruta | Qué es |
 |---|---|
 | `app/` | Código fuente de la app, tests y el esquema de Room exportado (`app/schemas/`) |
-| `entrega/` | APK instalable |
+| `entrega/` | Carpeta local del APK instalable; el APK no se versiona (está en `.gitignore`) y se distribuye en [Releases](https://github.com/ManuelOliverNacher/TpoRobotUade/releases) |
 | `evidencias/` | Capturas del emulador: selección, panel, rondas, alertas, historial, simulación (hoja con los 9 botones) y los escenarios, más falla, obstáculo y conexión degradada (`10_nuevas_*`); todas a 360 dp |
 | `docs/contrato-mensajes.md` | Contrato de mensajes (telemetría, comando, respuesta, evento) con ejemplos JSON **generados desde los modelos reales**; un test falla si el documento se desactualiza |
 | `ESPECIFICACION_PANTALLAS.md` | Especificación visual y de pantallas (base del Figma) |
 | `CLAUDE.md` | Reglas y alcance del proyecto |
 
-## Limitaciones conocidas
+## Decisiones de diseño
 
-- Solo se probó en un **emulador** (Pixel 7, Android 17), a 411 dp y a 360 dp. No se probó en un celular físico ni en una tablet.
-- El tema es **solo claro** (la especificación define una única paleta) y la orientación está **fija en vertical**. Desde Android 16, en pantallas grandes (tablets) el sistema puede ignorar el bloqueo de orientación.
-- La *Falla* se ve **solo por el estado**: no genera alerta ni evento, así que no aparece en Alertas ni en el historial de eventos (el contrato no tiene un tipo de evento de falla).
-- El *Obstáculo* bloquea **Volver a la base** y **Cancelar ronda**, pero no frena al robot: si la ronda termina sola, el robot regresa a la base igual (el regreso automático al terminar las 6 zonas no consulta la ruta).
 - No hay botón de **avisar a seguridad**: es una decisión del operador fuera de la app.
 - **Reconocer alertas** cierra todas las abiertas a la vez; el contrato no permite elegir una.
-- Las rondas guardadas **antes** de esta mejora pueden tener códigos repetidos (`M-001` varias veces); se distinguen por fecha. Desde ahora la numeración continúa sin repetirse.
-- Solo hay APK de **depuración** (sin firma de publicación ni ofuscación).
+
+## Limitaciones conocidas
+
+- **Robot simulado:** no se probó con hardware; la detección de personas es simulada.
+- La **detención operativa** es un comando de software y no reemplaza una parada de emergencia física.
+- **Alcance de las pruebas:** solo emulador (Pixel 7, Android 17) a 411 y 360 dp, no en celular físico ni tablet; orientación fija en vertical (desde Android 16 puede ignorarse en pantallas grandes); solo APK de depuración.
+- **Falla y obstáculo simplificados:** la falla se ve solo por el estado (sin alerta ni evento); el obstáculo bloquea *Volver a la base* y *Cancelar ronda* pero no frena al robot, y el regreso automático al terminar no consulta la ruta.
