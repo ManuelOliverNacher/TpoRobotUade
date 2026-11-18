@@ -127,6 +127,8 @@ SimulatedRobotRepository  →  SimulationEngine       RoomHistoryRepository  →
 - El ViewModel se crea **una sola vez por Activity** y sobrevive a la recreación. El simulador vive y muere con el ViewModel.
 - Versiones: Kotlin 2.2.10, AGP 9.3.3, Compose BOM 2026.02.01, Room 2.8.5 (con KSP 2.3.14), corrutinas 1.10.2, `minSdk 30`, `targetSdk 37`.
 
+![Arquitectura](docs/arquitectura.png)
+
 ## Tests
 
 ```bash
@@ -162,6 +164,9 @@ Clases de capturas: `PanelCapturasTest`, `PantallasCapturasTest` y `SimulacionCa
 | `entrega/` | Carpeta local del APK instalable; el APK no se versiona (está en `.gitignore`) y se distribuye en [Releases](https://github.com/ManuelOliverNacher/TpoRobotUade/releases) |
 | `evidencias/` | Capturas del emulador: selección, panel, rondas, alertas, historial, simulación (hoja con los 9 botones) y los escenarios, más falla, obstáculo y conexión degradada (`10_nuevas_*`); todas a 360 dp |
 | `docs/contrato-mensajes.md` | Contrato de mensajes (telemetría, comando, respuesta, evento) con ejemplos JSON **generados desde los modelos reales**; un test falla si el documento se desactualiza |
+| `docs/TP_HMI_Unitree_Go2_UADE.docx` | Documento de la entrega (caso de uso, elección del robot, riesgos, contrato, evidencias, decisiones y limitaciones) |
+| `docs/arquitectura.png` | Diagrama de arquitectura |
+| `docs/mapa-navegacion.png` | Mapa de navegación del prototipo de Figma |
 | `ESPECIFICACION_PANTALLAS.md` | Especificación visual y de pantallas (base del Figma) |
 | `CLAUDE.md` | Reglas y alcance del proyecto |
 
