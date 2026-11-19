@@ -165,6 +165,7 @@ Clases de capturas: `PanelCapturasTest`, `PantallasCapturasTest` y `SimulacionCa
 | `evidencias/` | Capturas del emulador: selección, panel, rondas, alertas, historial, simulación (hoja con los 9 botones) y los escenarios, más falla, obstáculo y conexión degradada (`10_nuevas_*`); todas a 360 dp |
 | `docs/contrato-mensajes.md` | Contrato de mensajes (telemetría, comando, respuesta, evento) con ejemplos JSON **generados desde los modelos reales**; un test falla si el documento se desactualiza |
 | `docs/TP_HMI_Unitree_Go2_UADE.docx` | Documento de la entrega (caso de uso, elección del robot, riesgos, contrato, evidencias, decisiones y limitaciones) |
+| Videos de demostración | [Carpeta de Google Drive](https://drive.google.com/drive/folders/1Y_xb_bbEZkj4pkoggs_ia-l45DKxOuqB?usp=sharing) con un video por escenario (misión normal, batería baja, desconexión, incidente y zona no verificable) |
 | `docs/arquitectura.png` | Diagrama de arquitectura |
 | `docs/mapa-navegacion.png` | Mapa de navegación del prototipo de Figma |
 | `ESPECIFICACION_PANTALLAS.md` | Especificación visual y de pantallas (base del Figma) |
@@ -179,5 +180,6 @@ Clases de capturas: `PanelCapturasTest`, `PantallasCapturasTest` y `SimulacionCa
 
 - **Robot simulado:** no se probó con hardware; la detección de personas es simulada.
 - La **detención operativa** es un comando de software y no reemplaza una parada de emergencia física.
-- **Alcance de las pruebas:** solo emulador (Pixel 7, Android 17) a 411 y 360 dp, no en celular físico ni tablet; orientación fija en vertical (desde Android 16 puede ignorarse en pantallas grandes); solo APK de depuración.
+- **Alcance de las pruebas:** las pruebas automáticas se corrieron en un emulador (Pixel 7, Android 17) a 411 y 360 dp; la app se instaló y ejecutó además en un celular físico (OnePlus 10T) para grabar los videos de demostración, sin repetir allí las pruebas automáticas, y no se probó en tablet; orientación fija en vertical (desde Android 16 puede ignorarse en pantallas grandes); solo APK de depuración.
 - **Falla y obstáculo simplificados:** la falla se ve solo por el estado (sin alerta ni evento); el obstáculo bloquea *Volver a la base* y *Cancelar ronda* pero no frena al robot, y el regreso automático al terminar no consulta la ruta.
+- **Batería agotada no modelada:** al llegar a 0 % el simulador no emite evento ni detiene al robot (la batería queda en 0 % y la ronda sigue); la app solo advierte a los 20 % y bloquea rondas nuevas por debajo del 10 %.
