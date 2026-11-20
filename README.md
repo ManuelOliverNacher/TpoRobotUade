@@ -168,6 +168,7 @@ Clases de capturas: `PanelCapturasTest`, `PantallasCapturasTest` y `SimulacionCa
 | Videos de demostración | [Carpeta de Google Drive](https://drive.google.com/drive/folders/1Y_xb_bbEZkj4pkoggs_ia-l45DKxOuqB?usp=sharing) con un video por escenario (misión normal, batería baja, desconexión, incidente y zona no verificable) |
 | `docs/arquitectura.png` | Diagrama de arquitectura |
 | `docs/mapa-navegacion.png` | Mapa de navegación del prototipo de Figma |
+| Prototipo en Figma | [Figma](https://www.figma.com/design/nUrQ2Lxeb9Zk9nAdn5ZH0H/HMI-Barrido-de-cierre-UADE---Unitree-Go2) |
 | `ESPECIFICACION_PANTALLAS.md` | Especificación visual y de pantallas (base del Figma) |
 | `CLAUDE.md` | Reglas y alcance del proyecto |
 
